@@ -69,7 +69,8 @@ class SpaceshipGame {
             totalCount: 0,
             targetBank: 1,
             currentLevel: 1,
-            levelName: 'Easy'
+            levelName: 'Easy',
+            problemLog: [] // Store recent problems for logging
         };
         
         // Visual effects
@@ -481,6 +482,7 @@ class SpaceshipGame {
             this.mathMode.active = true;
             this.mathMode.targetBank = 1; // Default to bank 1
             this.updateMathBankDisplay();
+            this.updateMathLog(); // Initialize the log display
             this.generateMathProblem();
             document.getElementById('mathMode').style.display = 'block';
             document.getElementById('mathAnswer').focus();
@@ -534,6 +536,7 @@ class SpaceshipGame {
     selectMathBank(bankNumber) {
         this.mathMode.targetBank = bankNumber;
         this.updateMathBankDisplay();
+        this.updateMathLog(); // Update log when switching banks
         this.generateMathProblem();
     }
     
@@ -675,25 +678,25 @@ class SpaceshipGame {
         const userAnswer = parseInt(document.getElementById('mathAnswer').value);
         this.mathMode.totalCount++;
         
-        // Show the result below the problem
-        this.showMathResult(userAnswer === this.mathMode.correctAnswer, userAnswer);
+        const isCorrect = userAnswer === this.mathMode.correctAnswer;
         
-        if (userAnswer === this.mathMode.correctAnswer) {
+        // Log the problem result
+        this.logMathProblem(this.mathMode.currentProblem, userAnswer, this.mathMode.correctAnswer, isCorrect);
+        
+        if (isCorrect) {
             this.mathMode.correctCount++;
             this.addAmmunition();
         }
         
         this.updateMathStats();
         
-        // Generate new problem after a short delay
+        // Generate new problem immediately
+        this.generateMathProblem();
+        // Clear the input and refocus
+        document.getElementById('mathAnswer').value = '';
         setTimeout(() => {
-            this.generateMathProblem();
-            // Clear the input and refocus
-            document.getElementById('mathAnswer').value = '';
-            setTimeout(() => {
-                document.getElementById('mathAnswer').focus();
-            }, 100);
-        }, 2000); // 2 second delay to show the result
+            document.getElementById('mathAnswer').focus();
+        }, 100);
     }
     
     addAmmunition() {
@@ -735,40 +738,70 @@ class SpaceshipGame {
         }, 1000);
     }
     
-    showMathResult(isCorrect, userAnswer) {
-        const resultDiv = document.getElementById('mathResult');
-        const correctAnswer = this.mathMode.correctAnswer;
+    logMathProblem(problem, userAnswer, correctAnswer, isCorrect) {
+        // Add to problem log (keep only last 5)
+        this.mathMode.problemLog.unshift({
+            problem: problem,
+            userAnswer: userAnswer,
+            correctAnswer: correctAnswer,
+            isCorrect: isCorrect,
+            timestamp: new Date()
+        });
         
-        if (isCorrect) {
-            resultDiv.innerHTML = `
-                <div style="color: #00ff00; text-shadow: 0 0 10px #00ff00;">
-                    ✅ CORRECT! ${userAnswer} is the right answer!
-                </div>
-                <div style="color: #88ff88; font-size: 14px; margin-top: 5px;">
-                    +10 ${this.ammoTypes[this.mathMode.targetBank].name} Ammo (Bank ${this.mathMode.targetBank})
-                </div>
-            `;
-            resultDiv.style.backgroundColor = 'rgba(0, 255, 0, 0.1)';
-            resultDiv.style.border = '2px solid #00ff00';
-        } else {
-            resultDiv.innerHTML = `
-                <div style="color: #ff4444; text-shadow: 0 0 10px #ff4444;">
-                    ❌ WRONG! You answered: ${userAnswer}
-                </div>
-                <div style="color: #ffaaaa; font-size: 14px; margin-top: 5px;">
-                    Correct answer: ${correctAnswer}
-                </div>
-            `;
-            resultDiv.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
-            resultDiv.style.border = '2px solid #ff4444';
+        // Keep only last 5 problems
+        if (this.mathMode.problemLog.length > 5) {
+            this.mathMode.problemLog = this.mathMode.problemLog.slice(0, 5);
         }
         
-        resultDiv.style.display = 'block';
+        // Update the log display
+        this.updateMathLog();
+    }
+    
+    updateMathLog() {
+        const logDiv = document.getElementById('mathLog');
+        if (!logDiv) return;
         
-        // Hide the result after 2 seconds
-        setTimeout(() => {
-            resultDiv.style.display = 'none';
-        }, 2000);
+        if (this.mathMode.problemLog.length === 0) {
+            logDiv.innerHTML = '<div style="color: #666; text-align: center; font-style: italic;">No problems yet</div>';
+            return;
+        }
+        
+        let logHTML = '';
+        this.mathMode.problemLog.forEach((entry, index) => {
+            const timeAgo = this.getTimeAgo(entry.timestamp);
+            const statusIcon = entry.isCorrect ? '✅' : '❌';
+            const statusColor = entry.isCorrect ? '#00ff00' : '#ff4444';
+            const ammoReward = entry.isCorrect ? `+10 ${this.ammoTypes[this.mathMode.targetBank].name}` : '';
+            
+            logHTML += `
+                <div style="margin-bottom: 8px; padding: 6px; background: rgba(0,0,0,0.3); border-radius: 3px; border-left: 3px solid ${statusColor};">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                        <span style="color: ${statusColor}; font-weight: bold;">${statusIcon}</span>
+                        <span style="color: #888; font-size: 10px;">${timeAgo}</span>
+                    </div>
+                    <div style="color: #fff; font-weight: bold; margin-bottom: 2px;">${entry.problem} = ?</div>
+                    <div style="color: #ccc; font-size: 11px;">
+                        You: <span style="color: ${statusColor};">${entry.userAnswer}</span>
+                        ${!entry.isCorrect ? ` | Correct: ${entry.correctAnswer}` : ''}
+                        ${ammoReward ? ` | ${ammoReward}` : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        logDiv.innerHTML = logHTML;
+    }
+    
+    getTimeAgo(timestamp) {
+        const now = new Date();
+        const diff = now - timestamp;
+        const seconds = Math.floor(diff / 1000);
+        
+        if (seconds < 60) return `${seconds}s ago`;
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        return `${hours}h ago`;
     }
     
     updateMathStats() {

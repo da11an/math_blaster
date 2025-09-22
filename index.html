@@ -141,19 +141,33 @@
         
         <div id="mathMode">
             <h2>🧮 MATH MODE - EARN AMMUNITION! 🧮</h2>
-            <div style="margin: 10px 0; text-align: center;">
-                <div style="color: #00ff00; font-size: 16px; margin-bottom: 10px;">Select Bank to Fill (Click or use F/D keys):</div>
-                <div id="mathBankDisplay" style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-bottom: 15px;"></div>
-                <div id="selectedBankInfo" style="color: #ffff00; font-size: 14px; margin-bottom: 10px;"></div>
-            </div>
-            <div id="mathProblem">Loading...</div>
-            <div id="mathResult" style="margin: 10px 0; padding: 10px; border-radius: 5px; text-align: center; font-size: 18px; font-weight: bold; min-height: 30px; display: none;"></div>
-            <input type="number" id="mathAnswer" placeholder="Answer" autofocus>
-            <br>
-            <button onclick="submitAnswer()">Submit Answer</button>
-            <button onclick="exitMathMode()">Back to Game</button>
-            <div id="mathStats">
-                <div>Correct: <span id="correctCount">0</span> | Total: <span id="totalCount">0</span> | Accuracy: <span id="accuracy">0%</span></div>
+            <div style="display: flex; gap: 20px;">
+                <!-- Main math area -->
+                <div style="flex: 1;">
+                    <div style="margin: 10px 0; text-align: center;">
+                        <div style="color: #00ff00; font-size: 16px; margin-bottom: 10px;">Select Bank to Fill (Click or use F/D keys):</div>
+                        <div id="mathBankDisplay" style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-bottom: 15px;"></div>
+                        <div id="selectedBankInfo" style="color: #ffff00; font-size: 14px; margin-bottom: 10px;"></div>
+                    </div>
+                    <div id="mathProblem">Loading...</div>
+                    <input type="number" id="mathAnswer" placeholder="Answer" autofocus>
+                    <br>
+                    <button onclick="submitAnswer()">Submit Answer</button>
+                    <button onclick="exitMathMode()">Back to Game</button>
+                    <div id="mathStats">
+                        <div>Correct: <span id="correctCount">0</span> | Total: <span id="totalCount">0</span> | Accuracy: <span id="accuracy">0%</span></div>
+                    </div>
+                </div>
+                
+                <!-- Math log area -->
+                <div style="flex: 0 0 300px; background: rgba(0,0,0,0.8); border: 1px solid #333; border-radius: 5px; padding: 10px; display: flex; flex-direction: column;">
+                    <div style="color: #00ff00; font-size: 14px; font-weight: bold; margin-bottom: 10px; text-align: center; flex-shrink: 0;">
+                        📊 Recent Problems
+                    </div>
+                    <div id="mathLog" style="flex: 1; overflow-y: auto; font-size: 12px; min-height: 0;">
+                        <!-- Math problems will be logged here -->
+                    </div>
+                </div>
             </div>
         </div>
         
