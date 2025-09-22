@@ -63,6 +63,9 @@ class UserManager:
                 'total_math_problems': 0,
                 'correct_math_problems': 0,
                 'total_enemies_destroyed': 0
+            },
+            'settings': {
+                'ammo_persistence': True  # Keep ammunition between games by default
             }
         }
         self.save_users()
@@ -101,6 +104,20 @@ class UserManager:
             return False
         
         self.users[username]['game_stats'].update(stats)
+        self.save_users()
+        return True
+    
+    def update_user_settings(self, username: str, settings: Dict) -> bool:
+        """Update user's settings"""
+        if username not in self.users:
+            return False
+        
+        # Initialize settings if they don't exist
+        if 'settings' not in self.users[username]:
+            self.users[username]['settings'] = {}
+        
+        # Update settings
+        self.users[username]['settings'].update(settings)
         self.save_users()
         return True
     

@@ -1,0 +1,17 @@
+{
+    "math_generators": {
+        "enabled": ["mental"],
+        "default": "mental",
+        "fallback": "simple"
+    },
+    "symbols": {
+        "multiplication": "×",
+        "division": "÷",
+        "addition": "+",
+        "subtraction": "-"
+    },
+    "settings": {
+        "use_proper_math_symbols": true,
+        "enable_fallback": true
+    }
+}

@@ -9,6 +9,7 @@ class SpaceshipGame {
         // Game state
         this.gameState = 'login'; // 'login', 'menu', 'playing', 'math', 'gameOver'
         this.currentUser = null;
+        this.userSettings = { ammo_persistence: true };
         this.apiBaseUrl = 'http://localhost:8001/api';
         this.score = 0;
         this.level = 1;
@@ -31,16 +32,16 @@ class SpaceshipGame {
         
         // Initialize 10 ammunition banks with increasing power (0-9)
         this.ammoTypes = [
-            { power: 0, color: '#666666', damage: 1, name: 'Pulse', infinite: true },    // Bank 0 - Infinite
-            { power: 1, color: '#00ff00', damage: 2, name: 'Heavy Pulse' },   // Bank 1
-            { power: 2, color: '#88ff00', damage: 3, name: 'Laser' },   // Bank 2
-            { power: 3, color: '#ffff00', damage: 4, name: 'Heavy Laser' },   // Bank 3
-            { power: 4, color: '#ffaa00', damage: 5, name: 'Blaster' },   // Bank 4
-            { power: 5, color: '#ff8800', damage: 8, name: 'Heavy Blaster' },      // Bank 5
-            { power: 6, color: '#ff4400', damage: 12, name: 'Cannon' },    // Bank 6
-            { power: 7, color: '#ff0000', damage: 18, name: 'Heavy Cannon' }, // Bank 7
-            { power: 8, color: '#ff00ff', damage: 25, name: 'Destroyer' },  // Bank 8
-            { power: 9, color: '#ffffff', damage: 35, name: 'Heavy Destroyer' }     // Bank 9
+            { power: 0, color: '#666666', damage: 1, name: 'Pulse', infinite: true, splashRadius: 0 },    // Bank 0 - Infinite
+            { power: 1, color: '#00ff00', damage: 2, name: 'Heavy Pulse', splashRadius: 0 },   // Bank 1
+            { power: 2, color: '#88ff00', damage: 3, name: 'Laser', splashRadius: 20 },   // Bank 2
+            { power: 3, color: '#ffff00', damage: 4, name: 'Heavy Laser', splashRadius: 20 },   // Bank 3
+            { power: 4, color: '#ffaa00', damage: 5, name: 'Blaster', splashRadius: 40 },   // Bank 4
+            { power: 5, color: '#ff8800', damage: 8, name: 'Heavy Blaster', splashRadius: 80 },      // Bank 5
+            { power: 6, color: '#ff4400', damage: 12, name: 'Cannon', splashRadius: 120 },    // Bank 6
+            { power: 7, color: '#ff0000', damage: 18, name: 'Heavy Cannon', splashRadius: 160 }, // Bank 7
+            { power: 8, color: '#ff00ff', damage: 25, name: 'Destroyer', splashRadius: 200 },  // Bank 8
+            { power: 9, color: '#ffffff', damage: 35, name: 'Heavy Destroyer', splashRadius: 240 }     // Bank 9
         ];
         
         // Initialize ammunition banks (0-9, so 10 banks total)
@@ -66,12 +67,15 @@ class SpaceshipGame {
             correctAnswer: 0,
             correctCount: 0,
             totalCount: 0,
-            targetBank: 1
+            targetBank: 1,
+            currentLevel: 1,
+            levelName: 'Easy'
         };
         
         // Visual effects
         this.particles = [];
         this.explosions = [];
+        this.splashEffects = []; // For splash damage visual effects
         
         // Level progression
         this.enemiesDestroyed = 0;
@@ -177,8 +181,14 @@ class SpaceshipGame {
             this.mathMode.totalCount = userData.game_stats.total_math_problems || 0;
         }
         
+        // Load user settings
+        if (userData.settings) {
+            this.userSettings = { ...this.userSettings, ...userData.settings };
+        }
+        
         this.updateAmmoDisplay();
         this.updateUI();
+        this.updateSettingsUI();
     }
     
     async saveUserData() {
@@ -224,6 +234,25 @@ class SpaceshipGame {
         }
     }
     
+    async saveUserSettings() {
+        if (!this.currentUser) return;
+        
+        try {
+            await fetch(`${this.apiBaseUrl}/save_settings`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: this.currentUser,
+                    settings: this.userSettings
+                })
+            });
+        } catch (error) {
+            console.error('Failed to save user settings:', error);
+        }
+    }
+    
     showLoginMessage(message, color) {
         const messageDiv = document.getElementById('loginMessage');
         messageDiv.textContent = message;
@@ -234,6 +263,20 @@ class SpaceshipGame {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('startScreen').style.display = 'block';
         document.getElementById('currentUser').textContent = this.currentUser;
+        this.updateSettingsUI();
+    }
+    
+    updateSettingsUI() {
+        const toggle = document.getElementById('ammoPersistenceToggle');
+        if (toggle) {
+            toggle.checked = this.userSettings.ammo_persistence;
+        }
+    }
+    
+    toggleAmmoPersistence() {
+        this.userSettings.ammo_persistence = !this.userSettings.ammo_persistence;
+        this.updateSettingsUI();
+        this.saveUserSettings();
     }
     
     logout() {
@@ -312,6 +355,7 @@ class SpaceshipGame {
         for (let i = 1; i < 10; i++) {
             this.ammunitionBanks[i] = [];
         }
+        this.splashEffects = []; // Clear any active splash effects
         this.updateAmmoDisplay();
     }
     
@@ -513,13 +557,54 @@ class SpaceshipGame {
     }
     
     getMathDifficultyText(bankNumber) {
+        // Map bank numbers to mental math level names
         if (bankNumber <= 2) return 'Easy';
         if (bankNumber <= 4) return 'Medium';
         if (bankNumber <= 6) return 'Hard';
-        return 'Expert';
+        if (bankNumber <= 8) return 'Expert';
+        return 'Master';
     }
     
-    generateMathProblem() {
+    async generateMathProblem() {
+        try {
+            const mathLevel = this.getMathLevelForBank(this.mathMode.targetBank);
+            
+            const response = await fetch(`${this.apiBaseUrl}/generate_math_problem`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    level: mathLevel
+                    // Let the factory decide which generator to use based on config
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.mathMode.currentProblem = data.problem.question;
+                this.mathMode.correctAnswer = data.problem.answer;
+                this.mathMode.currentLevel = data.problem.level;
+                this.mathMode.levelName = data.problem.level_name;
+                
+                document.getElementById('mathProblem').textContent = this.mathMode.currentProblem + ' = ?';
+                // Clear any previous result
+                document.getElementById('mathResult').style.display = 'none';
+            } else {
+                console.error('Failed to generate math problem:', data.message);
+                // Fallback to simple generation
+                this.generateSimpleMathProblem();
+            }
+        } catch (error) {
+            console.error('Error generating math problem:', error);
+            // Fallback to simple generation
+            this.generateSimpleMathProblem();
+        }
+    }
+    
+    generateSimpleMathProblem() {
+        // Fallback simple math generation (original logic)
         const operations = ['+', '-', '*', '/'];
         const operation = operations[Math.floor(Math.random() * operations.length)];
         
@@ -553,10 +638,12 @@ class SpaceshipGame {
         this.mathMode.correctAnswer = answer;
         
         document.getElementById('mathProblem').textContent = this.mathMode.currentProblem + ' = ?';
+        // Clear any previous result
+        document.getElementById('mathResult').style.display = 'none';
     }
     
     getMaxNumberForBank(bankNumber) {
-        // Map bank numbers to math difficulty ranges
+        // Fallback method for simple math generation
         if (bankNumber <= 2) {
             return 10;  // Easy math for banks 1-2
         } else if (bankNumber <= 4) {
@@ -568,26 +655,45 @@ class SpaceshipGame {
         }
     }
     
+    getMathLevelForBank(bankNumber) {
+        // Map bank numbers to math difficulty levels (1-10)
+        // Mental math generator has 10 levels, map to 10 banks
+        if (bankNumber <= 2) {
+            return 1;  // Easy math for banks 1-2
+        } else if (bankNumber <= 4) {
+            return 3;  // Medium math for banks 3-4
+        } else if (bankNumber <= 6) {
+            return 5;  // Hard math for banks 5-6
+        } else if (bankNumber <= 8) {
+            return 7;  // Expert math for banks 7-8
+        } else {
+            return 9;  // Master math for banks 9 (highest level)
+        }
+    }
+    
     submitAnswer() {
         const userAnswer = parseInt(document.getElementById('mathAnswer').value);
         this.mathMode.totalCount++;
         
+        // Show the result below the problem
+        this.showMathResult(userAnswer === this.mathMode.correctAnswer, userAnswer);
+        
         if (userAnswer === this.mathMode.correctAnswer) {
             this.mathMode.correctCount++;
             this.addAmmunition();
-            this.showMathFeedback(`Correct! +10 ${this.ammoTypes[this.mathMode.targetBank].name} Ammo (Bank ${this.mathMode.targetBank})`, this.ammoTypes[this.mathMode.targetBank].color);
-        } else {
-            this.showMathFeedback(`Wrong! Answer was ${this.mathMode.correctAnswer}`, '#ff0000');
         }
         
         this.updateMathStats();
-        document.getElementById('mathAnswer').value = '';
-        this.generateMathProblem();
         
-        // Refocus on the answer input
+        // Generate new problem after a short delay
         setTimeout(() => {
-            document.getElementById('mathAnswer').focus();
-        }, 100);
+            this.generateMathProblem();
+            // Clear the input and refocus
+            document.getElementById('mathAnswer').value = '';
+            setTimeout(() => {
+                document.getElementById('mathAnswer').focus();
+            }, 100);
+        }, 2000); // 2 second delay to show the result
     }
     
     addAmmunition() {
@@ -629,6 +735,42 @@ class SpaceshipGame {
         }, 1000);
     }
     
+    showMathResult(isCorrect, userAnswer) {
+        const resultDiv = document.getElementById('mathResult');
+        const correctAnswer = this.mathMode.correctAnswer;
+        
+        if (isCorrect) {
+            resultDiv.innerHTML = `
+                <div style="color: #00ff00; text-shadow: 0 0 10px #00ff00;">
+                    ✅ CORRECT! ${userAnswer} is the right answer!
+                </div>
+                <div style="color: #88ff88; font-size: 14px; margin-top: 5px;">
+                    +10 ${this.ammoTypes[this.mathMode.targetBank].name} Ammo (Bank ${this.mathMode.targetBank})
+                </div>
+            `;
+            resultDiv.style.backgroundColor = 'rgba(0, 255, 0, 0.1)';
+            resultDiv.style.border = '2px solid #00ff00';
+        } else {
+            resultDiv.innerHTML = `
+                <div style="color: #ff4444; text-shadow: 0 0 10px #ff4444;">
+                    ❌ WRONG! You answered: ${userAnswer}
+                </div>
+                <div style="color: #ffaaaa; font-size: 14px; margin-top: 5px;">
+                    Correct answer: ${correctAnswer}
+                </div>
+            `;
+            resultDiv.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
+            resultDiv.style.border = '2px solid #ff4444';
+        }
+        
+        resultDiv.style.display = 'block';
+        
+        // Hide the result after 2 seconds
+        setTimeout(() => {
+            resultDiv.style.display = 'none';
+        }, 2000);
+    }
+    
     updateMathStats() {
         document.getElementById('correctCount').textContent = this.mathMode.correctCount;
         document.getElementById('totalCount').textContent = this.mathMode.totalCount;
@@ -658,7 +800,8 @@ class SpaceshipGame {
                     speed: 8 + (ammo.power * 0.5), // Faster bullets for higher power
                     damage: ammo.damage,
                     color: ammo.color,
-                    power: ammo.power
+                    power: ammo.power,
+                    bankNumber: this.currentBank // Add bank number for splash damage
                 });
                 this.updateAmmoDisplay();
             } else {
@@ -781,6 +924,13 @@ class SpaceshipGame {
             return explosion.life > 0;
         });
         
+        // Update splash effects
+        this.splashEffects = this.splashEffects.filter(splash => {
+            splash.life--;
+            splash.radius = splash.maxRadius * (1 - splash.life / splash.maxLife);
+            return splash.life > 0;
+        });
+        
         // Check if enemy reached bottom
         this.enemies.forEach(enemy => {
             if (!enemy.fleeing && enemy.y + enemy.height >= this.height) {
@@ -790,8 +940,12 @@ class SpaceshipGame {
     }
     
     checkCollisions() {
-        // Bullet vs Enemy collisions
+        // Bullet vs Enemy collisions with splash damage
         this.bullets.forEach((bullet, bulletIndex) => {
+            let hitEnemy = null;
+            let hitEnemyIndex = -1;
+            
+            // Find direct hit
             this.enemies.forEach((enemy, enemyIndex) => {
                 if (!enemy.fleeing && 
                     bullet.x < enemy.x + enemy.width &&
@@ -799,22 +953,85 @@ class SpaceshipGame {
                     bullet.y < enemy.y + enemy.height &&
                     bullet.y + bullet.height > enemy.y) {
                     
-                    // Hit!
-                    enemy.shield -= bullet.damage;
-                    this.bullets.splice(bulletIndex, 1);
-                    
-        if (enemy.shield <= 0) {
-            // Shield down, enemy flees
-            enemy.fleeing = true;
-            this.score += 100;
-            this.enemiesDestroyed++;
-            this.createExplosion(enemy.x + enemy.width/2, enemy.y + enemy.height/2);
-            this.checkLevelComplete();
-            // Auto-save user data
-            this.saveUserData();
-        }
+                    hitEnemy = enemy;
+                    hitEnemyIndex = enemyIndex;
                 }
             });
+            
+            if (hitEnemy) {
+                // Process splash damage
+                this.processSplashDamage(bullet, hitEnemy, hitEnemyIndex);
+                this.bullets.splice(bulletIndex, 1);
+            }
+        });
+    }
+    
+    processSplashDamage(bullet, primaryEnemy, primaryEnemyIndex) {
+        const ammoType = this.ammoTypes[bullet.bankNumber];
+        const splashRadius = ammoType.splashRadius;
+        
+        if (splashRadius > 0) {
+            // Create splash effect
+            this.createSplashEffect(bullet.x + bullet.width/2, bullet.y + bullet.height/2, splashRadius, ammoType.color);
+            
+            // Calculate damage to primary target
+            const primaryDamage = Math.min(bullet.damage, primaryEnemy.shield);
+            primaryEnemy.shield -= primaryDamage;
+            let remainingDamage = bullet.damage - primaryDamage;
+            
+            // Find enemies within splash radius
+            const enemiesInRadius = [];
+            this.enemies.forEach((enemy, enemyIndex) => {
+                if (enemyIndex !== primaryEnemyIndex && !enemy.fleeing) {
+                    const dx = (bullet.x + bullet.width/2) - (enemy.x + enemy.width/2);
+                    const dy = (bullet.y + bullet.height/2) - (enemy.y + enemy.height/2);
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance <= splashRadius) {
+                        enemiesInRadius.push({ enemy, enemyIndex, distance });
+                    }
+                }
+            });
+            
+            // Sort by distance (closest first)
+            enemiesInRadius.sort((a, b) => a.distance - b.distance);
+            
+            // Distribute remaining damage
+            enemiesInRadius.forEach(({ enemy, enemyIndex }) => {
+                if (remainingDamage > 0) {
+                    const splashDamage = Math.min(remainingDamage, enemy.shield);
+                    enemy.shield -= splashDamage;
+                    remainingDamage -= splashDamage;
+                    
+                    // Create smaller explosion for splash hits
+                    this.createExplosion(enemy.x + enemy.width/2, enemy.y + enemy.height/2, 0.5);
+                }
+            });
+        } else {
+            // No splash damage, just direct hit
+            primaryEnemy.shield -= bullet.damage;
+        }
+        
+        // Check if primary enemy is destroyed
+        if (primaryEnemy.shield <= 0) {
+            primaryEnemy.fleeing = true;
+            this.score += 100;
+            this.enemiesDestroyed++;
+            this.createExplosion(primaryEnemy.x + primaryEnemy.width/2, primaryEnemy.y + primaryEnemy.height/2);
+            this.checkLevelComplete();
+            this.saveUserData();
+        }
+        
+        // Check all enemies for destruction (including splash targets)
+        this.enemies.forEach((enemy, enemyIndex) => {
+            if (enemy.shield <= 0 && !enemy.fleeing) {
+                enemy.fleeing = true;
+                this.score += 100;
+                this.enemiesDestroyed++;
+                this.createExplosion(enemy.x + enemy.width/2, enemy.y + enemy.height/2);
+                this.checkLevelComplete();
+                this.saveUserData();
+            }
         });
     }
     
@@ -850,7 +1067,13 @@ class SpaceshipGame {
         this.levelEnemyTarget = 5;
         this.particles = [];
         this.explosions = [];
-        this.clearAllAmmunition();
+        this.splashEffects = [];
+        
+        // Only clear ammunition if persistence is disabled
+        if (!this.userSettings.ammo_persistence) {
+            this.clearAllAmmunition();
+        }
+        
         this.updateUI();
         this.gameState = 'playing';
     }
@@ -886,26 +1109,40 @@ class SpaceshipGame {
         }, 2000);
     }
     
-    createExplosion(x, y) {
+    createExplosion(x, y, scale = 1) {
         this.explosions.push({
             x: x,
             y: y,
             life: 30,
             maxLife: 30,
-            particles: []
+            particles: [],
+            scale: scale
         });
         
         // Create particles
-        for (let i = 0; i < 10; i++) {
+        const particleCount = Math.floor(10 * scale);
+        for (let i = 0; i < particleCount; i++) {
             this.particles.push({
                 x: x,
                 y: y,
-                vx: (Math.random() - 0.5) * 8,
-                vy: (Math.random() - 0.5) * 8,
+                vx: (Math.random() - 0.5) * 8 * scale,
+                vy: (Math.random() - 0.5) * 8 * scale,
                 life: 30,
                 color: `hsl(${Math.random() * 60 + 20}, 100%, 50%)`
             });
         }
+    }
+    
+    createSplashEffect(x, y, radius, color) {
+        this.splashEffects.push({
+            x: x,
+            y: y,
+            radius: 0,
+            maxRadius: radius,
+            life: 20,
+            maxLife: 20,
+            color: color
+        });
     }
     
     updateUI() {
@@ -946,10 +1183,21 @@ class SpaceshipGame {
             // Draw explosions
             this.explosions.forEach(explosion => {
                 const alpha = explosion.life / explosion.maxLife;
+                const scale = explosion.scale || 1;
                 this.ctx.fillStyle = `rgba(255, 100, 0, ${alpha})`;
                 this.ctx.beginPath();
-                this.ctx.arc(explosion.x, explosion.y, (1 - alpha) * 30, 0, 2 * Math.PI);
+                this.ctx.arc(explosion.x, explosion.y, (1 - alpha) * 30 * scale, 0, 2 * Math.PI);
                 this.ctx.fill();
+            });
+            
+            // Draw splash effects
+            this.splashEffects.forEach(splash => {
+                const alpha = splash.life / splash.maxLife;
+                this.ctx.strokeStyle = `${splash.color}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`;
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.arc(splash.x, splash.y, splash.radius, 0, 2 * Math.PI);
+                this.ctx.stroke();
             });
         }
     }
@@ -1041,6 +1289,10 @@ function submitAnswer() {
 
 function exitMathMode() {
     game.exitMathMode();
+}
+
+function toggleAmmoPersistence() {
+    game.toggleAmmoPersistence();
 }
 
 // Removed changeTargetBank function - now using clickable bank buttons

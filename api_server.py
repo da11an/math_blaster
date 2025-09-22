@@ -55,6 +55,10 @@ class APIHandler(BaseHTTPRequestHandler):
             self.handle_save_ammunition(data)
         elif path == '/api/save_stats':
             self.handle_save_stats(data)
+        elif path == '/api/save_settings':
+            self.handle_save_settings(data)
+        elif path == '/api/generate_math_problem':
+            self.handle_generate_math_problem(data)
         else:
             self.send_error(404, "Not Found")
     
@@ -145,6 +149,79 @@ class APIHandler(BaseHTTPRequestHandler):
             self.send_json_response(404, {
                 'success': False,
                 'message': 'User not found'
+            })
+    
+    def handle_save_settings(self, data):
+        """Handle saving user settings"""
+        username = data.get('username', '')
+        settings = data.get('settings', {})
+        
+        if not username:
+            self.send_json_response(400, {
+                'success': False,
+                'message': 'Username required'
+            })
+            return
+        
+        success = user_manager.update_user_settings(username, settings)
+        if success:
+            self.send_json_response(200, {
+                'success': True,
+                'message': 'Settings saved successfully'
+            })
+        else:
+            self.send_json_response(404, {
+                'success': False,
+                'message': 'User not found'
+            })
+    
+    def handle_generate_math_problem(self, data):
+        """Handle generating math problems"""
+        try:
+            from generators.math_generator_factory import MathGeneratorFactory
+            
+            level = data.get('level', 1)
+            generator_type = data.get('generator_type', None)  # Let factory decide default
+            
+            # Validate level
+            if not isinstance(level, int) or level < 1:
+                self.send_json_response(400, {
+                    'success': False,
+                    'message': 'Level must be a positive integer'
+                })
+                return
+            
+            # Create factory and generator
+            factory = MathGeneratorFactory()
+            generator = factory.create_generator(generator_type)
+            
+            # Check if level is valid for this generator
+            if level > generator.get_max_level():
+                self.send_json_response(400, {
+                    'success': False,
+                    'message': f'Level {level} not supported. Max level: {generator.get_max_level()}'
+                })
+                return
+            
+            # Generate problem
+            problem = generator.generate_problem(level)
+            
+            self.send_json_response(200, {
+                'success': True,
+                'problem': {
+                    'question': problem.question,
+                    'answer': problem.answer,
+                    'level': problem.level,
+                    'type': problem.problem_type,
+                    'level_name': generator.get_level_name(level),
+                    'description': generator.describe_level(level)
+                }
+            })
+            
+        except Exception as e:
+            self.send_json_response(500, {
+                'success': False,
+                'message': f'Error generating math problem: {str(e)}'
             })
     
     def handle_list_users(self):

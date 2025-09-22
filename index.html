@@ -147,6 +147,7 @@
                 <div id="selectedBankInfo" style="color: #ffff00; font-size: 14px; margin-bottom: 10px;"></div>
             </div>
             <div id="mathProblem">Loading...</div>
+            <div id="mathResult" style="margin: 10px 0; padding: 10px; border-radius: 5px; text-align: center; font-size: 18px; font-weight: bold; min-height: 30px; display: none;"></div>
             <input type="number" id="mathAnswer" placeholder="Answer" autofocus>
             <br>
             <button onclick="submitAnswer()">Submit Answer</button>
@@ -195,6 +196,17 @@
                 <div>• Destroy enemy shields to make them flee</div>
                 <div>• Complete levels by destroying enough enemies</div>
             </div>
+            
+            <div style="margin: 20px 0; padding: 15px; background: rgba(0,255,0,0.1); border: 1px solid #00ff00; border-radius: 5px;">
+                <label style="color: #00ff00; font-size: 16px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="ammoPersistenceToggle" onchange="toggleAmmoPersistence()" style="transform: scale(1.5);">
+                    Keep ammunition between games
+                </label>
+                <div style="color: #888; font-size: 12px; margin-top: 5px;">
+                    When enabled, your ammunition banks persist when you lose all lives
+                </div>
+            </div>
+            
             <button onclick="startGame()" style="font-size: 20px; padding: 15px 30px; margin: 10px;">START GAME</button>
             <button onclick="logout()" style="font-size: 16px; padding: 10px 20px; margin: 10px;">Logout</button>
         </div>
