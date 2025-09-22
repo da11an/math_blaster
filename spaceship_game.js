@@ -738,20 +738,20 @@ class SpaceshipGame {
         }, 1000);
     }
     
-    logMathProblem(problem, userAnswer, correctAnswer, isCorrect) {
-        // Add to problem log (keep only last 5)
-        this.mathMode.problemLog.unshift({
-            problem: problem,
-            userAnswer: userAnswer,
-            correctAnswer: correctAnswer,
-            isCorrect: isCorrect,
-            timestamp: new Date()
-        });
-        
-        // Keep only last 5 problems
-        if (this.mathMode.problemLog.length > 5) {
-            this.mathMode.problemLog = this.mathMode.problemLog.slice(0, 5);
-        }
+        logMathProblem(problem, userAnswer, correctAnswer, isCorrect) {
+            // Add to problem log (keep only last 6)
+            this.mathMode.problemLog.unshift({
+                problem: problem,
+                userAnswer: userAnswer,
+                correctAnswer: correctAnswer,
+                isCorrect: isCorrect,
+                timestamp: new Date()
+            });
+            
+            // Keep only last 6 problems
+            if (this.mathMode.problemLog.length > 6) {
+                this.mathMode.problemLog = this.mathMode.problemLog.slice(0, 6);
+            }
         
         // Update the log display
         this.updateMathLog();
