@@ -1,0 +1,6 @@
+# Math Blaster Dependencies
+# No external dependencies required for basic functionality
+# Future enhancements may require:
+# pygame>=2.0.0  # For graphical interface
+# colorama>=0.4.4  # For colored terminal output
+

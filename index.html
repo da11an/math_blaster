@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Blaster - Spaceship Edition</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+            font-family: 'Courier New', monospace;
+            color: #00ff00;
+            overflow: hidden;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #gameCanvas {
+            border: 2px solid #00ff00;
+            background: radial-gradient(circle at center, #000011 0%, #000000 100%);
+            box-shadow: 0 0 20px #00ff00;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            color: #00ff00;
+            font-size: 16px;
+            text-shadow: 0 0 5px #00ff00;
+        }
+        
+        #mathMode {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #00ff00;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 20;
+            display: none;
+        }
+        
+        #mathProblem {
+            font-size: 24px;
+            margin: 20px 0;
+            color: #00ff00;
+        }
+        
+        #mathAnswer {
+            font-size: 18px;
+            padding: 10px;
+            background: #000;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            border-radius: 5px;
+            width: 100px;
+            text-align: center;
+        }
+        
+        #mathAnswer:focus {
+            outline: none;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        
+        button {
+            background: #000;
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 10px 20px;
+            margin: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background: #00ff00;
+            color: #000;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        
+        #instructions {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .ammo-display {
+            display: flex;
+            gap: 5px;
+            margin: 10px 0;
+        }
+        
+        .ammo-item {
+            width: 20px;
+            height: 20px;
+            border: 1px solid #00ff00;
+            background: #00ff00;
+            border-radius: 3px;
+        }
+        
+        .ammo-item.empty {
+            background: transparent;
+        }
+        
+        .ammo-item.power-1 { background: #00ff00; }
+        .ammo-item.power-2 { background: #ffff00; }
+        .ammo-item.power-3 { background: #ff8800; }
+        .ammo-item.power-4 { background: #ff0000; }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div id="ui">
+            <div>Score: <span id="score">0</span></div>
+            <div>Level: <span id="level">1</span></div>
+            <div>Lives: <span id="lives">3</span></div>
+            <div>Ammunition:</div>
+            <div id="ammoDisplay" class="ammo-display"></div>
+            <div>Press M for math mode | 0-9 to select ammo bank | D: Downgrade | F: Find Upgrade | F/D in math mode</div>
+        </div>
+        
+        <div id="mathMode">
+            <h2>🧮 MATH MODE - EARN AMMUNITION! 🧮</h2>
+            <div style="margin: 10px 0; text-align: center;">
+                <div style="color: #00ff00; font-size: 16px; margin-bottom: 10px;">Select Bank to Fill (Click or use F/D keys):</div>
+                <div id="mathBankDisplay" style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-bottom: 15px;"></div>
+                <div id="selectedBankInfo" style="color: #ffff00; font-size: 14px; margin-bottom: 10px;"></div>
+            </div>
+            <div id="mathProblem">Loading...</div>
+            <input type="number" id="mathAnswer" placeholder="Answer" autofocus>
+            <br>
+            <button onclick="submitAnswer()">Submit Answer</button>
+            <button onclick="exitMathMode()">Back to Game</button>
+            <div id="mathStats">
+                <div>Correct: <span id="correctCount">0</span> | Total: <span id="totalCount">0</span> | Accuracy: <span id="accuracy">0%</span></div>
+            </div>
+        </div>
+        
+        <div id="loginScreen" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 25; background: rgba(0,0,0,0.9); padding: 40px; border: 2px solid #00ff00; border-radius: 10px;">
+            <h1 style="color: #00ff00; font-size: 48px; margin: 0 0 20px 0; text-shadow: 0 0 20px #00ff00;">🚀 MATH BLASTER 🚀</h1>
+            <p style="color: #00ff00; font-size: 18px; margin: 20px 0;">Defend your spaceship with math-powered ammunition!</p>
+            
+            <div id="loginForm" style="margin: 20px 0;">
+                <div style="margin: 10px 0;">
+                    <input type="text" id="username" placeholder="Username" autofocus style="padding: 10px; margin: 5px; background: #000; border: 1px solid #00ff00; color: #00ff00; border-radius: 5px; width: 200px;">
+                </div>
+                <div style="margin: 10px 0;">
+                    <input type="password" id="password" placeholder="Password" style="padding: 10px; margin: 5px; background: #000; border: 1px solid #00ff00; color: #00ff00; border-radius: 5px; width: 200px;">
+                </div>
+                <div style="margin: 15px 0;">
+                    <button onclick="login()" style="font-size: 16px; padding: 10px 20px; margin: 5px;">Login</button>
+                    <button onclick="register()" style="font-size: 16px; padding: 10px 20px; margin: 5px;">Register</button>
+                </div>
+                <div id="loginMessage" style="color: #ff0000; font-size: 14px; margin: 10px 0;"></div>
+            </div>
+            
+            <div style="color: #888; font-size: 12px; margin: 20px 0;">
+                <div>• Your progress and ammunition are saved automatically</div>
+                <div>• Create an account to keep your data between sessions</div>
+                <div>• Press Enter to login, or click the buttons</div>
+            </div>
+        </div>
+        
+        <div id="startScreen" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 25; background: rgba(0,0,0,0.9); padding: 40px; border: 2px solid #00ff00; border-radius: 10px; display: none;">
+            <h1 style="color: #00ff00; font-size: 48px; margin: 0 0 20px 0; text-shadow: 0 0 20px #00ff00;">🚀 MATH BLASTER 🚀</h1>
+            <p style="color: #00ff00; font-size: 18px; margin: 20px 0;">Welcome, <span id="currentUser">Player</span>!</p>
+            <div style="color: #888; font-size: 14px; margin: 20px 0;">
+                <div>• Use arrow keys to move your spaceship</div>
+                <div>• Press SPACEBAR to shoot at enemy ships</div>
+                <div>• Press M to enter math mode and earn ammunition</div>
+                <div>• Press 0-9 to select different ammunition banks</div>
+                <div>• Press D to downgrade, F to find upgrade ammunition</div>
+                <div>• Bank 0 has infinite basic ammunition</div>
+                <div>• Harder math problems give more powerful ammunition</div>
+                <div>• Destroy enemy shields to make them flee</div>
+                <div>• Complete levels by destroying enough enemies</div>
+            </div>
+            <button onclick="startGame()" style="font-size: 20px; padding: 15px 30px; margin: 10px;">START GAME</button>
+            <button onclick="logout()" style="font-size: 16px; padding: 10px 20px; margin: 10px;">Logout</button>
+        </div>
+        
+        <div id="instructions">
+            Arrow Keys: Move | Space: Shoot | M: Math Mode | 0-9: Select Ammo Bank | D: Downgrade | F: Find Upgrade | F/D: Math Bank Selection | Enter: Submit Answer
+        </div>
+    </div>
+    
+    <script src="spaceship_game.js?v=2"></script>
+</body>
+</html>
