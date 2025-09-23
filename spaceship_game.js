@@ -33,15 +33,15 @@ class SpaceshipGame {
         // Initialize 10 ammunition banks with increasing power (0-9)
         this.ammoTypes = [
             { power: 0, color: '#666666', damage: 1, name: 'Pulse', infinite: true, splashRadius: 0 },    // Bank 0 - Infinite
-            { power: 1, color: '#00ff00', damage: 2, name: 'Heavy Pulse', splashRadius: 0 },   // Bank 1
+            { power: 1, color: '#00ff00', damage: 2, name: 'Heavy Pulse', splashRadius: 10 },   // Bank 1
             { power: 2, color: '#88ff00', damage: 3, name: 'Laser', splashRadius: 20 },   // Bank 2
-            { power: 3, color: '#ffff00', damage: 4, name: 'Heavy Laser', splashRadius: 20 },   // Bank 3
-            { power: 4, color: '#ffaa00', damage: 5, name: 'Blaster', splashRadius: 40 },   // Bank 4
-            { power: 5, color: '#ff8800', damage: 8, name: 'Heavy Blaster', splashRadius: 80 },      // Bank 5
-            { power: 6, color: '#ff4400', damage: 12, name: 'Cannon', splashRadius: 120 },    // Bank 6
-            { power: 7, color: '#ff0000', damage: 18, name: 'Heavy Cannon', splashRadius: 160 }, // Bank 7
-            { power: 8, color: '#ff00ff', damage: 25, name: 'Destroyer', splashRadius: 200 },  // Bank 8
-            { power: 9, color: '#ffffff', damage: 35, name: 'Heavy Destroyer', splashRadius: 240 }     // Bank 9
+            { power: 3, color: '#ffff00', damage: 4, name: 'Heavy Laser', splashRadius: 40 },   // Bank 3
+            { power: 4, color: '#ffaa00', damage: 5, name: 'Blaster', splashRadius: 70 },   // Bank 4
+            { power: 5, color: '#ff8800', damage: 8, name: 'Heavy Blaster', splashRadius: 100 },      // Bank 5
+            { power: 6, color: '#ff4400', damage: 12, name: 'Cannon', splashRadius: 150 },    // Bank 6
+            { power: 7, color: '#ff0000', damage: 18, name: 'Heavy Cannon', splashRadius: 200 }, // Bank 7
+            { power: 8, color: '#ff00ff', damage: 25, name: 'Destroyer', splashRadius: 250 },  // Bank 8
+            { power: 9, color: '#ffffff', damage: 35, name: 'Heavy Destroyer', splashRadius: 300 }     // Bank 9
         ];
         
         // Initialize ammunition banks (0-9, so 10 banks total)
@@ -70,7 +70,8 @@ class SpaceshipGame {
             targetBank: 1,
             currentLevel: 1,
             levelName: 'Easy',
-            problemLog: [] // Store recent problems for logging
+            problemLog: [], // Store recent problems for logging
+            problemStartTime: null // Track when problem was generated
         };
         
         // Visual effects
@@ -112,14 +113,37 @@ class SpaceshipGame {
             });
             
             const data = await response.json();
+            console.log('API response:', data);
             
             if (data.success) {
+                console.log('Login successful, setting up user...');
                 this.currentUser = username;
-                this.loadUserData(data.user_data);
+                try {
+                    this.loadUserData(data.user_data);
+                    console.log('loadUserData() completed');
+                } catch (error) {
+                    console.error('Error in loadUserData():', error);
+                }
+                console.log('About to show login message');
                 this.showLoginMessage('Login successful!', '#00ff00');
-                this.showStartScreen();
-                return true;
+                console.log('Login message shown');
+                
+                // Show logout button
+                console.log('About to show logout button');
+                document.getElementById('logoutBtn').style.display = 'inline-block';
+                console.log('Logout button shown');
+                
+                console.log('About to call showStartScreen()');
+                try {
+                    this.showStartScreen();
+                    console.log('showStartScreen() returned, login method returning true');
+                    return true;
+                } catch (error) {
+                    console.error('Error in showStartScreen():', error);
+                    return false;
+                }
             } else {
+                console.log('Login failed:', data.message);
                 this.showLoginMessage(data.message, '#ff0000');
                 return false;
             }
@@ -261,10 +285,20 @@ class SpaceshipGame {
     }
     
     showStartScreen() {
+        console.log('showStartScreen() called');
+        this.gameState = 'menu';
+        console.log('Game state set to:', this.gameState);
+        
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('startScreen').style.display = 'block';
+        console.log('UI screens updated');
+        
         document.getElementById('currentUser').textContent = this.currentUser;
+        console.log('Current user set to:', this.currentUser);
+        
         this.updateSettingsUI();
+        this.updateUI();
+        console.log('showStartScreen() completed');
     }
     
     updateSettingsUI() {
@@ -281,20 +315,99 @@ class SpaceshipGame {
     }
     
     logout() {
+        console.log('logout() called');
+        // Save current user data before logging out
+        if (this.currentUser) {
+            console.log('Saving user data for:', this.currentUser);
+            this.saveUserData();
+        }
+        
+        // Stop the game loop by setting game state to login
+        this.gameState = 'login';
         this.currentUser = null;
-        this.clearAllAmmunition(); // Reset to default
+        console.log('Game state set to login, currentUser cleared');
+        
+        // Clear all game objects
+        this.bullets = [];
+        this.enemies = [];
+        this.particles = [];
+        this.explosions = [];
+        this.splashEffects = [];
+        
+        // Reset game counters and stats
         this.score = 0;
         this.level = 1;
         this.lives = 3;
+        this.enemiesDestroyed = 0;
+        this.enemySpawnTimer = 0;
+        
+        // Reset math mode
+        this.mathMode.active = false;
         this.mathMode.correctCount = 0;
         this.mathMode.totalCount = 0;
-        this.enemiesDestroyed = 0;
+        this.mathMode.problemLog = [];
+        this.mathMode.problemStartTime = null;
         
-        document.getElementById('startScreen').style.display = 'none';
-        document.getElementById('loginScreen').style.display = 'block';
+        // Reset player position
+        this.player.x = this.width / 2 - this.player.width / 2;
+        this.player.y = this.height - this.player.height - 10;
+        
+        // Clear ammunition
+        this.clearAllAmmunition();
+        
+        // Hide all screens except login
+        console.log('Hiding all screens except login');
+        
+        // Hide screens with error handling
+        const startScreen = document.getElementById('startScreen');
+        if (startScreen) startScreen.style.display = 'none';
+        
+        const mathMode = document.getElementById('mathMode');
+        if (mathMode) {
+            mathMode.style.display = 'none';
+            console.log('Math mode screen hidden');
+        } else {
+            console.log('Math mode screen not found');
+        }
+        
+        const gameOver = document.getElementById('gameOver');
+        if (gameOver) gameOver.style.display = 'none';
+        
+        const loginScreen = document.getElementById('loginScreen');
+        if (loginScreen) {
+            loginScreen.style.display = 'block';
+            console.log('Login screen should now be visible');
+        } else {
+            console.log('Login screen not found!');
+        }
+        
+        // Hide logout button
+        console.log('Hiding logout button');
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.style.display = 'none';
+            console.log('Logout button hidden');
+        } else {
+            console.log('Logout button not found');
+        }
+        
+        // Clear login form
         document.getElementById('username').value = '';
         document.getElementById('password').value = '';
-        this.showLoginMessage('', '#ff0000');
+        this.showLoginMessage('Logged out successfully', '#00ff00');
+        
+        // Update UI elements
+        document.getElementById('currentUser').textContent = 'Guest';
+        this.updateUI();
+        
+        // Clear the canvas
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        
+        // Focus on username field for immediate login
+        setTimeout(() => {
+            document.getElementById('username').focus();
+            console.log('Username field focused, logout complete');
+        }, 100);
     }
     
     setupEventListeners() {
@@ -304,6 +417,9 @@ class SpaceshipGame {
             if (e.code === 'KeyM' && this.gameState !== 'login') {
                 e.preventDefault();
                 this.toggleMathMode();
+            } else if (e.code === 'Escape' && this.currentUser) {
+                e.preventDefault();
+                this.logout();
             } else if (e.code === 'Space' && this.gameState === 'playing') {
                 e.preventDefault();
                 this.shoot();
@@ -570,6 +686,9 @@ class SpaceshipGame {
     
     async generateMathProblem() {
         try {
+            // Record the start time for this problem
+            this.mathMode.problemStartTime = Date.now();
+            
             const mathLevel = this.getMathLevelForBank(this.mathMode.targetBank);
             
             const response = await fetch(`${this.apiBaseUrl}/generate_math_problem`, {
@@ -607,6 +726,9 @@ class SpaceshipGame {
     }
     
     generateSimpleMathProblem() {
+        // Record the start time for this problem
+        this.mathMode.problemStartTime = Date.now();
+        
         // Fallback simple math generation (original logic)
         const operations = ['+', '-', '*', '/'];
         const operation = operations[Math.floor(Math.random() * operations.length)];
@@ -680,12 +802,20 @@ class SpaceshipGame {
         
         const isCorrect = userAnswer === this.mathMode.correctAnswer;
         
+        // Calculate reward amount for display
+        const rewardAmount = isCorrect ? this.calculateHalfLifeReward() : 0;
+        
         // Log the problem result
-        this.logMathProblem(this.mathMode.currentProblem, userAnswer, this.mathMode.correctAnswer, isCorrect);
+        this.logMathProblem(this.mathMode.currentProblem, userAnswer, this.mathMode.correctAnswer, isCorrect, rewardAmount);
         
         if (isCorrect) {
             this.mathMode.correctCount++;
             this.addAmmunition();
+            
+            // Show reward feedback
+            this.showMathFeedback(`+${rewardAmount} ammo!`, '#00ff00');
+        } else {
+            this.showMathFeedback('Incorrect!', '#ff4444');
         }
         
         this.updateMathStats();
@@ -699,16 +829,36 @@ class SpaceshipGame {
         }, 100);
     }
     
+    calculateHalfLifeReward() {
+        if (!this.mathMode.problemStartTime) {
+            return 10; // Fallback to minimum amount
+        }
+        
+        const responseTime = (Date.now() - this.mathMode.problemStartTime) / 1000; // Convert to seconds
+        const halfLife = 2; // 2 second half-life
+        const initialReward = 100;
+        const minReward = 10;
+        
+        // Calculate reward using half-life formula: initial * (0.5)^(time/halfLife)
+        const reward = Math.max(minReward, Math.round(initialReward * Math.pow(0.5, responseTime / halfLife)));
+        
+        return reward;
+    }
+
     addAmmunition() {
-        // Add 10 shots to the target bank
+        // Calculate reward based on response time (half-life system)
+        const rewardAmount = this.calculateHalfLifeReward();
+        
+        // Add calculated shots to the target bank
         const bank = this.ammunitionBanks[this.mathMode.targetBank];
         if (bank.length < this.maxAmmoPerBank) {
             const ammoType = this.ammoTypes[this.mathMode.targetBank];
-            for (let i = 0; i < this.ammoPerProblem; i++) {
-                if (bank.length < this.maxAmmoPerBank) {
-                    bank.push(ammoType);
-                }
+            const shotsToAdd = Math.min(rewardAmount, this.maxAmmoPerBank - bank.length);
+            
+            for (let i = 0; i < shotsToAdd; i++) {
+                bank.push(ammoType);
             }
+            
             this.updateAmmoDisplay();
             // Also update the math bank display if in math mode
             if (this.gameState === 'math') {
@@ -738,21 +888,22 @@ class SpaceshipGame {
         }, 1000);
     }
     
-        logMathProblem(problem, userAnswer, correctAnswer, isCorrect) {
-            // Add to problem log (keep only last 6)
-            this.mathMode.problemLog.unshift({
-                problem: problem,
-                userAnswer: userAnswer,
-                correctAnswer: correctAnswer,
-                isCorrect: isCorrect,
-                timestamp: new Date()
-            });
-            
-            // Keep only last 6 problems
-            if (this.mathMode.problemLog.length > 6) {
-                this.mathMode.problemLog = this.mathMode.problemLog.slice(0, 6);
-            }
+    logMathProblem(problem, userAnswer, correctAnswer, isCorrect, rewardAmount = 0) {
+        // Add to problem log (keep only last 6)
+        this.mathMode.problemLog.unshift({
+            problem: problem,
+            userAnswer: userAnswer,
+            correctAnswer: correctAnswer,
+            isCorrect: isCorrect,
+            rewardAmount: rewardAmount,
+            timestamp: new Date()
+        });
         
+        // Keep only last 6 problems
+        if (this.mathMode.problemLog.length > 6) {
+            this.mathMode.problemLog = this.mathMode.problemLog.slice(0, 6);
+        }
+    
         // Update the log display
         this.updateMathLog();
     }
@@ -771,7 +922,7 @@ class SpaceshipGame {
             const timeAgo = this.getTimeAgo(entry.timestamp);
             const statusIcon = entry.isCorrect ? '✅' : '❌';
             const statusColor = entry.isCorrect ? '#00ff00' : '#ff4444';
-            const ammoReward = entry.isCorrect ? `+10 ${this.ammoTypes[this.mathMode.targetBank].name}` : '';
+            const ammoReward = entry.isCorrect ? `+${entry.rewardAmount} ${this.ammoTypes[this.mathMode.targetBank].name}` : '';
             
             logHTML += `
                 <div style="margin-bottom: 8px; padding: 6px; background: rgba(0,0,0,0.3); border-radius: 3px; border-left: 3px solid ${statusColor};">
@@ -904,10 +1055,10 @@ class SpaceshipGame {
         if (this.gameState !== 'playing') return;
         
         // Update player
-        if (this.keys['ArrowLeft'] && this.player.x > 0) {
+        if ((this.keys['ArrowLeft'] || this.keys['KeyJ']) && this.player.x > 0) {
             this.player.x -= this.player.speed;
         }
-        if (this.keys['ArrowRight'] && this.player.x < this.width - this.player.width) {
+        if ((this.keys['ArrowRight'] || this.keys['KeyL']) && this.player.x < this.width - this.player.width) {
             this.player.x += this.player.speed;
         }
         
@@ -1189,6 +1340,11 @@ class SpaceshipGame {
         this.ctx.fillStyle = '#000011';
         this.ctx.fillRect(0, 0, this.width, this.height);
         
+        // Only render game elements if not in login state
+        if (this.gameState === 'login') {
+            return; // Don't render anything in login state
+        }
+        
         // Draw stars
         this.drawStars();
         
@@ -1309,8 +1465,11 @@ class SpaceshipGame {
     }
     
     gameLoop() {
-        this.update();
-        this.render();
+        // Only update and render if not in login state
+        if (this.gameState !== 'login') {
+            this.update();
+            this.render();
+        }
         requestAnimationFrame(() => this.gameLoop());
     }
 }
@@ -1331,15 +1490,25 @@ function toggleAmmoPersistence() {
 // Removed changeTargetBank function - now using clickable bank buttons
 
 async function login() {
+    console.log('Global login function called');
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     
+    console.log('Username:', username, 'Password length:', password.length);
+    
     if (!username || !password) {
+        console.log('Missing username or password');
         game.showLoginMessage('Please enter both username and password', '#ff0000');
         return;
     }
     
-    await game.login(username, password);
+    console.log('Calling game.login()');
+    try {
+        const result = await game.login(username, password);
+        console.log('game.login() completed, result:', result);
+    } catch (error) {
+        console.error('Error in game.login():', error);
+    }
 }
 
 async function register() {
@@ -1365,3 +1534,5 @@ function startGame() {
 
 // Start the game
 const game = new SpaceshipGame();
+console.log('Game object created:', game);
+console.log('Game API URL:', game.apiBaseUrl);
