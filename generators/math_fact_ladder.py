@@ -47,7 +47,7 @@ class FactLadderGenerator:
             1: "Addition up to 10 + 10.",
             2: "Subtraction within 0..10 (minuend/subtrahend ≤ 10).",
             3: "Addition up to 20 + 20, excluding pairs where both addends ≤ 10.",
-            4: "Subtraction within 0..20, excluding pairs where both terms ≤ 10.",
+            4: "Subtraction within 0..40, excluding pairs where both terms ≤ 10.",
             5: "Multiplication facts up to 10 × 10.",
             6: "Division with divisors 1..10 and quotients 0..10.",
             7: "Multiplication up to 15 × 15, excluding pairs where both factors ≤ 10.",
@@ -94,12 +94,12 @@ class FactLadderGenerator:
                 if not (a <= 10 and b <= 10):
                     return f"{a} + {b}", a + b
 
-        # ---------------- Level 4: Subtraction within 0..20 (exclude L2) --
-        def l4_subtraction_20_excl_l2():
+        # ---------------- Level 4: Subtraction within 0..40 (exclude L2) --
+        def l4_subtraction_40_excl_l2():
             # Exclude cases where both terms ≤ 10
             while True:
-                b = random.randint(0, 20)
-                a = random.randint(b, 20)  # ensure a ≥ b
+                b = random.randint(0, 40)
+                a = random.randint(b, 40)  # ensure a ≥ b
                 if not (a <= 10 and b <= 10):
                     return f"{a} - {b}", a - b
 
@@ -199,7 +199,7 @@ class FactLadderGenerator:
             1: [ProblemTemplate("add_≤10", l1_addition_10, 1)],
             2: [ProblemTemplate("sub_≤10", l2_subtraction_10, 1)],
             3: [ProblemTemplate("add_≤20_excl_L1", l3_addition_20_excl_l1, 1)],
-            4: [ProblemTemplate("sub_≤20_excl_L2", l4_subtraction_20_excl_l2, 1)],
+            4: [ProblemTemplate("sub_≤40_excl_L2", l4_subtraction_40_excl_l2, 1)],
             5: [ProblemTemplate("mult_≤10", l5_mult_10, 1)],
             6: [ProblemTemplate("div_≤10", l6_div_10, 1)],
             7: [ProblemTemplate("mult_≤15_excl_≤10×≤10", l7_mult_15_excl_10, 1)],
