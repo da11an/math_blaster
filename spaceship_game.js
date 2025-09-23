@@ -148,6 +148,7 @@ class SpaceshipGame {
             this.updateAmmoDisplay();
         }
         this.updateUI();
+        this.drawAmmoBanks(); // Initialize ammo banks display
         this.gameLoop();
     }
     
@@ -591,66 +592,8 @@ class SpaceshipGame {
     }
     
     updateAmmoDisplay() {
-        const ammoDisplay = document.getElementById('ammoDisplay');
-        ammoDisplay.innerHTML = '';
-        
-        // Show all 10 banks (0-9)
-        for (let i = 0; i < 10; i++) {
-            const bankContainer = document.createElement('div');
-            bankContainer.style.display = 'flex';
-            bankContainer.style.alignItems = 'center';
-            bankContainer.style.marginBottom = '5px';
-            bankContainer.style.border = this.currentBank === i ? '2px solid #ffffff' : '1px solid #444';
-            bankContainer.style.padding = '2px';
-            bankContainer.style.borderRadius = '3px';
-            
-            // Bank number
-            const bankNumber = document.createElement('div');
-            bankNumber.textContent = `${i}:`;
-            bankNumber.style.color = '#00ff00';
-            bankNumber.style.fontSize = '12px';
-            bankNumber.style.marginRight = '5px';
-            bankNumber.style.minWidth = '15px';
-            bankContainer.appendChild(bankNumber);
-            
-            // Ammo count
-            const count = document.createElement('div');
-            count.textContent = i === 0 ? '∞' : this.ammunitionBanks[i].length;
-            count.style.color = (i === 0 || this.ammunitionBanks[i].length > 0) ? '#ffffff' : '#ff0000';
-            count.style.fontSize = '12px';
-            count.style.marginRight = '5px';
-            count.style.minWidth = '20px';
-            bankContainer.appendChild(count);
-            
-            // Ammo type indicator
-            const ammoIndicator = document.createElement('div');
-            ammoIndicator.style.width = '20px';
-            ammoIndicator.style.height = '10px';
-            ammoIndicator.style.backgroundColor = this.ammoTypes[i].color;
-            ammoIndicator.style.borderRadius = '2px';
-            ammoIndicator.style.marginRight = '5px';
-            bankContainer.appendChild(ammoIndicator);
-            
-            // Ammo name
-            const ammoName = document.createElement('div');
-            ammoName.textContent = this.ammoTypes[i].name;
-            ammoName.style.color = this.ammoTypes[i].color;
-            ammoName.style.fontSize = '10px';
-            ammoName.style.textShadow = '0 0 5px currentColor';
-            bankContainer.appendChild(ammoName);
-            
-            ammoDisplay.appendChild(bankContainer);
-        }
-        
-        // Show current bank info
-        const currentBankInfo = document.createElement('div');
-        const count = this.currentBank === 0 ? '∞' : this.ammunitionBanks[this.currentBank].length;
-        currentBankInfo.textContent = `Current: Bank ${this.currentBank} (${count} shots)`;
-        currentBankInfo.style.color = this.ammoTypes[this.currentBank].color;
-        currentBankInfo.style.fontSize = '14px';
-        currentBankInfo.style.marginTop = '10px';
-        currentBankInfo.style.textShadow = '0 0 5px currentColor';
-        ammoDisplay.appendChild(currentBankInfo);
+        // Update the new ammo banks display instead of the old one
+        this.drawAmmoBanks();
     }
     
     toggleMathMode() {
@@ -1635,6 +1578,11 @@ class SpaceshipGame {
                 this.ctx.arc(splash.x, splash.y, splash.radius, 0, 2 * Math.PI);
                 this.ctx.stroke();
             });
+            
+            // Draw new UI elements
+            this.drawLifeBar();
+            this.drawAmmoBanks();
+            this.drawScoreAndLevel();
         }
     }
     
@@ -1763,17 +1711,19 @@ class SpaceshipGame {
             this.ctx.shadowBlur = 0;
         }
         
-        // Draw bank number on gun (consistent size, black text for light colors)
-        // Determine text color based on ammunition color brightness
-        const color = ammoType.color;
-        const rgb = this.hexToRgb(color);
-        const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
-        const textColor = brightness > 128 ? '#000000' : '#ffffff'; // Black for light colors, white for dark
-        
-        this.ctx.fillStyle = textColor;
-        this.ctx.font = '12px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText(this.currentBank.toString(), x + w/2, gunY + gunHeight/2 + 4);
+        // Draw bank number on gun (only in game mode, not math mode)
+        if (this.gameState === 'playing') {
+            // Determine text color based on ammunition color brightness
+            const color = ammoType.color;
+            const rgb = this.hexToRgb(color);
+            const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
+            const textColor = brightness > 128 ? '#000000' : '#ffffff'; // Black for light colors, white for dark
+            
+            this.ctx.fillStyle = textColor;
+            this.ctx.font = '12px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(this.currentBank.toString(), x + w/2, gunY + gunHeight/2 + 4);
+        }
         
         // Draw ammunition count indicator (small dots above gun)
         const ammoCount = this.ammunitionBanks[this.currentBank].length;
@@ -1785,6 +1735,171 @@ class SpaceshipGame {
         for (let i = 0; i < Math.min(5, Math.ceil(ammoCount / (maxAmmo / 5))); i++) {
             this.ctx.fillStyle = ammoType.color;
             this.ctx.fillRect(indicatorStartX + (i * 3), indicatorY, 2, 2);
+        }
+    }
+    
+    drawLifeBar() {
+        // Update HTML life bar instead of drawing on canvas
+        const lifeBar = document.getElementById('lifeBar');
+        if (lifeBar) {
+            const lifePercent = (this.lives / 5) * 100;
+            lifeBar.style.width = `${lifePercent}%`;
+        }
+    }
+    
+    drawAmmoBanks() {
+        // Update HTML ammo banks instead of drawing on canvas
+        const container = document.getElementById('ammoBanksContainer');
+        if (!container) return;
+        
+        // Check if sliding container already exists
+        let slidingContainer = container.querySelector('.sliding-container');
+        
+        if (!slidingContainer) {
+            // Create a sliding container
+            slidingContainer = document.createElement('div');
+            slidingContainer.className = 'sliding-container';
+            slidingContainer.style.cssText = `
+                display: flex;
+                gap: 2px;
+                height: 80px;
+                transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+                position: absolute;
+                left: 0;
+                top: 5px;
+            `;
+            container.appendChild(slidingContainer);
+            
+            // Create bank elements if they don't exist
+            for (let i = 0; i < 10; i++) {
+                const bankElement = document.createElement('div');
+                bankElement.className = `ammo-bank bank-${i}`;
+                bankElement.style.cssText = `
+                    width: 76px;
+                    height: 80px;
+                    background: #222;
+                    border: 1px solid #666;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    padding: 2px;
+                    cursor: pointer;
+                    position: relative;
+                    flex-shrink: 0;
+                    border-radius: 4px;
+                    transition: all 0.3s ease;
+                `;
+                
+                // Fill bar (bottom-to-top fill)
+                const fillBar = document.createElement('div');
+                fillBar.className = 'fill-bar';
+                fillBar.style.cssText = `
+                    width: 100%;
+                    height: 0%;
+                    background: #ff0000;
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    opacity: 0.3;
+                    border-radius: 2px;
+                    transition: height 0.3s ease, background-color 0.3s ease;
+                `;
+                bankElement.appendChild(fillBar);
+                
+                // Bank number
+                const bankNumber = document.createElement('div');
+                bankNumber.className = 'bank-number';
+                bankNumber.textContent = i.toString();
+                bankNumber.style.cssText = `
+                    color: white;
+                    font-family: monospace;
+                    font-size: 12px;
+                    font-weight: bold;
+                    z-index: 1;
+                    position: relative;
+                `;
+                bankElement.appendChild(bankNumber);
+                
+                // Ammo type name
+                const typeName = document.createElement('div');
+                typeName.className = 'type-name';
+                typeName.textContent = this.ammoTypes[i].name;
+                typeName.style.cssText = `
+                    color: white;
+                    font-family: monospace;
+                    font-size: 8px;
+                    text-align: center;
+                    z-index: 1;
+                    position: relative;
+                `;
+                bankElement.appendChild(typeName);
+                
+                // Ammo count
+                const ammoCountElement = document.createElement('div');
+                ammoCountElement.className = 'ammo-count';
+                ammoCountElement.textContent = `${this.ammunitionBanks[i].length}/${this.maxAmmoPerBank}`;
+                ammoCountElement.style.cssText = `
+                    color: white;
+                    font-family: monospace;
+                    font-size: 8px;
+                    z-index: 1;
+                    position: relative;
+                `;
+                bankElement.appendChild(ammoCountElement);
+                
+                // Add click handler
+                bankElement.addEventListener('click', () => {
+                    this.currentBank = i;
+                    this.updateAmmoDisplay();
+                });
+                
+                slidingContainer.appendChild(bankElement);
+            }
+        }
+        
+        // Update all bank elements
+        for (let i = 0; i < 10; i++) {
+            const bankElement = slidingContainer.querySelector(`.bank-${i}`);
+            const fillBar = bankElement.querySelector('.fill-bar');
+            const ammoCountElement = bankElement.querySelector('.ammo-count');
+            
+            const ammoCount = this.ammunitionBanks[i].length;
+            const maxAmmo = this.maxAmmoPerBank;
+            const fillPercent = ammoCount / maxAmmo;
+            const isSelected = i === this.currentBank;
+            
+            // Update bank styling
+            bankElement.style.background = isSelected ? '#444' : '#222';
+            bankElement.style.border = isSelected ? '3px solid #00ff00' : '1px solid #666';
+            
+            // Update fill bar
+            const fillColor = fillPercent > 0.5 ? '#00ff00' : fillPercent > 0.2 ? '#ffff00' : '#ff0000';
+            fillBar.style.height = `${fillPercent * 100}%`;
+            fillBar.style.background = fillColor;
+            
+            // Update ammo count
+            ammoCountElement.textContent = `${ammoCount}/${maxAmmo}`;
+        }
+        
+        // Calculate and apply sliding animation
+        const bankWidth = 76;
+        const gap = 2;
+        const totalBankWidth = bankWidth + gap;
+        const containerWidth = 800;
+        const selectedBankOffset = (containerWidth / 2) - (this.currentBank * totalBankWidth + bankWidth / 2);
+        slidingContainer.style.transform = `translateX(${selectedBankOffset}px)`;
+    }
+    
+    drawScoreAndLevel() {
+        // Update HTML elements instead of drawing on canvas
+        const levelElement = document.getElementById('level');
+        const scoreElement = document.getElementById('score');
+        
+        if (levelElement) {
+            levelElement.textContent = this.level;
+        }
+        if (scoreElement) {
+            scoreElement.textContent = this.score;
         }
     }
     

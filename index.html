@@ -127,16 +127,49 @@
     </style>
 </head>
 <body>
-    <div id="gameContainer">
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="gameContainer" style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+        <!-- Top UI Row -->
+        <div style="display: flex; justify-content: space-between; width: 800px; align-items: center;">
+            <!-- Left: Life Bar -->
+            <div id="lifeBarContainer" style="width: 150px; height: 30px; background: #333; border: 2px solid #666; border-radius: 15px; position: relative;">
+                <div id="lifeBar" style="height: 100%; background: #ff4444; border-radius: 13px; transition: width 0.3s;"></div>
+            </div>
+            
+            <!-- Center: Status Info -->
+            <div style="display: flex; gap: 20px; align-items: center;">
+                <div style="color: #00ff00; font-family: monospace; font-size: 14px;">
+                    Level: <span id="level">1</span>
+                </div>
+                <div style="color: #00ff00; font-family: monospace; font-size: 18px; font-weight: bold;">MATH BLASTER</div>
+                <div style="color: #00ff00; font-family: monospace; font-size: 14px;">
+                    Score: <span id="score">0</span>
+                </div>
+            </div>
+            
+            <!-- Right: Controls -->
+            <div id="instructions" style="color: #00ff00; font-family: monospace; font-size: 10px; text-align: right; max-width: 200px;">
+                <div><strong>Controls:</strong></div>
+                <div>Arrow Keys or J/L: Move</div>
+                <div>Space: Shoot | M: Math Mode</div>
+                <div>0-9: Select Bank | D: Downgrade</div>
+                <div>F: Find Upgrade | ESC: Logout</div>
+            </div>
+        </div>
         
-        <div id="ui">
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas" width="800" height="600" style="border: 2px solid #00ff00;"></canvas>
+        
+        <!-- Bottom UI Row -->
+        <div style="display: flex; justify-content: center; width: 800px; align-items: center;">
+            <!-- Center: Ammo Banks -->
+            <div id="ammoBanksContainer" style="display: flex; gap: 2px; height: 90px; overflow: hidden; position: relative; width: 800px; padding: 5px 0;"></div>
+        </div>
+        
+        <!-- Hidden UI for compatibility -->
+        <div id="ui" style="display: none;">
             <div>Score: <span id="score">0</span></div>
             <div>Level: <span id="level">1</span></div>
             <div>Lives: <span id="lives">3</span></div>
-            <div>Ammunition:</div>
-            <div id="ammoDisplay" class="ammo-display"></div>
-            <div>Press M for math mode | 0-9 to select ammo bank | D: Downgrade | F: Find Upgrade | F/D in math mode | ESC: Logout | J/L: Move</div>
         </div>
         
         <div id="mathMode">
@@ -237,11 +270,8 @@
             <button id="logoutBtn" onclick="logout()" style="font-size: 16px; padding: 10px 20px; margin: 10px;">Logout</button>
         </div>
         
-        <div id="instructions">
-            Arrow Keys: Move | Space: Shoot | M: Math Mode | 0-9: Select Ammo Bank | D: Downgrade | F: Find Upgrade | F/D: Math Bank Selection | Enter: Submit Answer
-        </div>
     </div>
     
-    <script src="spaceship_game.js?v=5"></script>
+    <script src="spaceship_game.js?v=11"></script>
 </body>
 </html>
