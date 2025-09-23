@@ -183,6 +183,16 @@
                 <div style="margin: 10px 0;">
                     <input type="password" id="password" placeholder="Password" style="padding: 10px; margin: 5px; background: #000; border: 1px solid #00ff00; color: #00ff00; border-radius: 5px; width: 200px;">
                 </div>
+                <div style="margin: 10px 0;">
+                    <label style="color: #00ff00; font-size: 14px;">Choose Ship Color:</label>
+                    <div style="margin: 5px 0;">
+                        <button onclick="selectColorway('blue')" id="colorway-blue" style="width: 30px; height: 30px; margin: 2px; background: #4a90e2; border: 2px solid #00ff00; border-radius: 3px;"></button>
+                        <button onclick="selectColorway('red')" id="colorway-red" style="width: 30px; height: 30px; margin: 2px; background: #e24a4a; border: 2px solid #666; border-radius: 3px;"></button>
+                        <button onclick="selectColorway('green')" id="colorway-green" style="width: 30px; height: 30px; margin: 2px; background: #4ae24a; border: 2px solid #666; border-radius: 3px;"></button>
+                        <button onclick="selectColorway('purple')" id="colorway-purple" style="width: 30px; height: 30px; margin: 2px; background: #8a4ae2; border: 2px solid #666; border-radius: 3px;"></button>
+                        <button onclick="selectColorway('orange')" id="colorway-orange" style="width: 30px; height: 30px; margin: 2px; background: #e28a4a; border: 2px solid #666; border-radius: 3px;"></button>
+                    </div>
+                </div>
                 <div style="margin: 15px 0;">
                     <button onclick="login()" style="font-size: 16px; padding: 10px 20px; margin: 5px;">Login</button>
                     <button onclick="register()" style="font-size: 16px; padding: 10px 20px; margin: 5px;">Register</button>
@@ -232,6 +242,6 @@
         </div>
     </div>
     
-    <script src="spaceship_game.js?v=3"></script>
+    <script src="spaceship_game.js?v=5"></script>
 </body>
 </html>

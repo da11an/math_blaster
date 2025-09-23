@@ -19,10 +19,11 @@ class SpaceshipGame {
         this.player = {
             x: this.width / 2,
             y: this.height - 60,
-            width: 40,
-            height: 30,
+            width: 60,  // 50% larger (was 40)
+            height: 45, // 50% larger (was 30)
             speed: 5,
-            color: '#00ff00'
+            color: '#00ff00',
+            colorway: 'blue' // Default colorway
         };
         
         // Ammunition system - 9 banks with different power levels
@@ -51,6 +52,54 @@ class SpaceshipGame {
         
         // Current bank selection (start with basic infinite ammo)
         this.currentBank = 0;
+        
+        // Gun pulse effect
+        this.gunPulseTime = 0;
+        this.gunPulseDuration = 200; // milliseconds
+        
+        // Ship colorways
+        this.shipColorways = {
+            'blue': {
+                main: '#4a90e2',
+                wing: '#2e5c8a',
+                trim: '#87ceeb',
+                cockpit: '#87ceeb',
+                highlight: '#ffffff',
+                engine: '#00ffff'
+            },
+            'red': {
+                main: '#e24a4a',
+                wing: '#8a2e2e',
+                trim: '#eb8787',
+                cockpit: '#eb8787',
+                highlight: '#ffffff',
+                engine: '#ff4444'
+            },
+            'green': {
+                main: '#4ae24a',
+                wing: '#2e8a2e',
+                trim: '#87eb87',
+                cockpit: '#87eb87',
+                highlight: '#ffffff',
+                engine: '#44ff44'
+            },
+            'purple': {
+                main: '#8a4ae2',
+                wing: '#5a2e8a',
+                trim: '#b787eb',
+                cockpit: '#b787eb',
+                highlight: '#ffffff',
+                engine: '#8844ff'
+            },
+            'orange': {
+                main: '#e28a4a',
+                wing: '#8a5a2e',
+                trim: '#ebb787',
+                cockpit: '#ebb787',
+                highlight: '#ffffff',
+                engine: '#ff8844'
+            }
+        };
         
         // Bullets
         this.bullets = [];
@@ -102,14 +151,14 @@ class SpaceshipGame {
         this.gameLoop();
     }
     
-    async login(username, password) {
+    async login(username, password, colorway = null) {
         try {
             const response = await fetch(`${this.apiBaseUrl}/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ username, password, colorway })
             });
             
             const data = await response.json();
@@ -118,6 +167,12 @@ class SpaceshipGame {
             if (data.success) {
                 console.log('Login successful, setting up user...');
                 this.currentUser = username;
+                
+                // Use selected colorway if provided, otherwise use saved colorway
+                if (colorway) {
+                    this.player.colorway = colorway;
+                }
+                
                 try {
                     this.loadUserData(data.user_data);
                     console.log('loadUserData() completed');
@@ -153,14 +208,14 @@ class SpaceshipGame {
         }
     }
     
-    async register(username, password) {
+    async register(username, password, colorway = 'blue') {
         try {
             const response = await fetch(`${this.apiBaseUrl}/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ username, password, colorway })
             });
             
             const data = await response.json();
@@ -182,6 +237,11 @@ class SpaceshipGame {
     }
     
     loadUserData(userData) {
+        // Load ship colorway
+        if (userData.colorway) {
+            this.player.colorway = userData.colorway;
+        }
+        
         // Load ammunition banks (convert counts back to arrays)
         if (userData.ammunition_banks) {
             for (let i = 0; i < 10; i++) {
@@ -233,7 +293,8 @@ class SpaceshipGame {
                 },
                 body: JSON.stringify({
                     username: this.currentUser,
-                    ammunition_banks: banks
+                    ammunition_banks: banks,
+                    colorway: this.player.colorway
                 })
             });
             
@@ -977,7 +1038,7 @@ class SpaceshipGame {
                 }
                 
                 this.bullets.push({
-                    x: this.player.x + this.player.width / 2,
+                    x: this.player.x + this.player.width / 2 - (6 + ammo.power * 2) / 2, // Center bullet
                     y: this.player.y,
                     width: 6 + (ammo.power * 2), // Bigger bullets for higher power
                     height: 12 + (ammo.power * 2),
@@ -987,6 +1048,10 @@ class SpaceshipGame {
                     power: ammo.power,
                     bankNumber: this.currentBank // Add bank number for splash damage
                 });
+                
+                // Trigger gun pulse effect
+                this.gunPulseTime = Date.now();
+                
                 this.updateAmmoDisplay();
             } else {
                 // Auto-downgrade to basic ammo if current bank is empty
@@ -1030,13 +1095,9 @@ class SpaceshipGame {
     }
     
     spawnEnemy() {
-        const enemyTypes = [
-            { size: 30, shield: 2, speed: 1, color: '#ff0000' },
-            { size: 40, shield: 3, speed: 0.8, color: '#ff8800' },
-            { size: 50, shield: 5, speed: 0.6, color: '#8800ff' }
-        ];
-        
-        const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+        // Get available enemy types based on level
+        const availableTypes = this.getAvailableEnemyTypes();
+        const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
         
         this.enemies.push({
             x: Math.random() * (this.width - type.size),
@@ -1047,8 +1108,182 @@ class SpaceshipGame {
             color: type.color,
             shield: type.shield,
             maxShield: type.shield,
-            fleeing: false
+            fleeing: false,
+            personality: type.personality,
+            name: type.name,
+            behavior: type.behavior,
+            behaviorTimer: 0,
+            originalX: 0,
+            sideDirection: Math.random() > 0.5 ? 1 : -1,
+            spiralAngle: 0
         });
+    }
+    
+    getAvailableEnemyTypes() {
+        const allTypes = [
+            // Level 1-2: Basic enemies (easy to destroy)
+            { 
+                size: 25, 
+                shield: 1, 
+                speed: 0.8, 
+                color: '#ff6666',
+                personality: 'basic',
+                name: 'Scout',
+                behavior: 'straight_down',
+                minLevel: 1
+            },
+            { 
+                size: 30, 
+                shield: 1, 
+                speed: 0.6, 
+                color: '#66ff66',
+                personality: 'basic',
+                name: 'Patrol',
+                behavior: 'straight_down',
+                minLevel: 1
+            },
+            
+            // Level 3-4: Slightly tougher
+            { 
+                size: 35, 
+                shield: 2, 
+                speed: 0.7, 
+                color: '#6666ff',
+                personality: 'defensive',
+                name: 'Guardian',
+                behavior: 'straight_down',
+                minLevel: 3
+            },
+            { 
+                size: 40, 
+                shield: 2, 
+                speed: 0.5, 
+                color: '#ffff66',
+                personality: 'defensive',
+                name: 'Sentinel',
+                behavior: 'straight_down',
+                minLevel: 3
+            },
+            
+            // Level 5-6: Start moving patterns
+            { 
+                size: 30, 
+                shield: 3, 
+                speed: 0.9, 
+                color: '#ff6666',
+                personality: 'agile',
+                name: 'Interceptor',
+                behavior: 'zigzag',
+                minLevel: 5
+            },
+            { 
+                size: 35, 
+                shield: 3, 
+                speed: 0.8, 
+                color: '#66ffff',
+                personality: 'agile',
+                name: 'Swift',
+                behavior: 'side_to_side',
+                minLevel: 5
+            },
+            
+            // Level 7-8: Advanced patterns
+            { 
+                size: 40, 
+                shield: 4, 
+                speed: 0.7, 
+                color: '#ff66ff',
+                personality: 'aggressive',
+                name: 'Hunter',
+                behavior: 'dive_bomb',
+                minLevel: 7
+            },
+            { 
+                size: 45, 
+                shield: 5, 
+                speed: 0.6, 
+                color: '#ffaa66',
+                personality: 'tank',
+                name: 'Destroyer',
+                behavior: 'straight_down',
+                minLevel: 7
+            },
+            
+            // Level 9+: Boss-level enemies
+            { 
+                size: 50, 
+                shield: 6, 
+                speed: 0.5, 
+                color: '#aa66ff',
+                personality: 'boss',
+                name: 'Warlord',
+                behavior: 'spiral',
+                minLevel: 9
+            },
+            { 
+                size: 55, 
+                shield: 7, 
+                speed: 0.4, 
+                color: '#ffaa00',
+                personality: 'boss',
+                name: 'Titan',
+                behavior: 'complex_pattern',
+                minLevel: 9
+            }
+        ];
+        
+        // Filter types available at current level
+        return allTypes.filter(type => this.level >= type.minLevel);
+    }
+    
+    updateEnemyBehavior(enemy) {
+        enemy.behaviorTimer++;
+        
+        switch (enemy.behavior) {
+            case 'straight_down':
+                // Basic enemies: Just move straight down (no horizontal movement)
+                break;
+                
+            case 'zigzag':
+                // Agile enemies: Zigzag pattern
+                if (enemy.behaviorTimer % 60 < 30) {
+                    enemy.x += enemy.speed * 0.3;
+                } else {
+                    enemy.x -= enemy.speed * 0.3;
+                }
+                break;
+                
+            case 'side_to_side':
+                // Agile enemies: Side to side movement
+                enemy.x += Math.sin(enemy.behaviorTimer * 0.1) * enemy.speed * 0.4;
+                break;
+                
+            case 'dive_bomb':
+                // Aggressive enemies: Dive toward player
+                if (enemy.behaviorTimer > 30) {
+                    const playerCenterX = this.player.x + this.player.width / 2;
+                    const enemyCenterX = enemy.x + enemy.width / 2;
+                    const direction = playerCenterX > enemyCenterX ? 1 : -1;
+                    enemy.x += direction * enemy.speed * 0.5;
+                }
+                break;
+                
+            case 'spiral':
+                // Boss enemies: Spiral pattern
+                enemy.spiralAngle += 0.1;
+                enemy.x += Math.cos(enemy.spiralAngle) * enemy.speed * 0.3;
+                break;
+                
+            case 'complex_pattern':
+                // Boss enemies: Complex movement pattern
+                const wave1 = Math.sin(enemy.behaviorTimer * 0.05) * 2;
+                const wave2 = Math.cos(enemy.behaviorTimer * 0.08) * 1.5;
+                enemy.x += (wave1 + wave2) * enemy.speed * 0.2;
+                break;
+        }
+        
+        // Keep enemies within bounds
+        enemy.x = Math.max(0, Math.min(this.width - enemy.width, enemy.x));
     }
     
     update() {
@@ -1075,7 +1310,7 @@ class SpaceshipGame {
             this.enemySpawnTimer = 0;
         }
         
-        // Update enemies
+        // Update enemies with personality-based movement
         this.enemies = this.enemies.filter(enemy => {
             if (enemy.fleeing) {
                 // Move to sides
@@ -1086,6 +1321,8 @@ class SpaceshipGame {
                 }
                 return enemy.x > -enemy.width && enemy.x < this.width + enemy.width;
             } else {
+                // Apply personality-based movement
+                this.updateEnemyBehavior(enemy);
                 enemy.y += enemy.speed;
                 return enemy.y < this.height + enemy.height;
             }
@@ -1352,10 +1589,20 @@ class SpaceshipGame {
             // Draw player
             this.drawPlayer();
             
-            // Draw bullets
+            // Draw bullets with enhanced visuals
             this.bullets.forEach(bullet => {
+                // Draw bullet with glow effect
+                this.ctx.shadowColor = bullet.color;
+                this.ctx.shadowBlur = 8;
                 this.ctx.fillStyle = bullet.color;
                 this.ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+                this.ctx.shadowBlur = 0;
+                
+                // Draw bullet trail effect
+                this.ctx.fillStyle = bullet.color;
+                this.ctx.globalAlpha = 0.3;
+                this.ctx.fillRect(bullet.x - 1, bullet.y - 2, bullet.width + 2, bullet.height + 2);
+                this.ctx.globalAlpha = 1.0;
             });
             
             // Draw enemies
@@ -1400,68 +1647,291 @@ class SpaceshipGame {
         }
     }
     
+    hexToRgb(hex) {
+        // Convert hex color to RGB
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : {r: 255, g: 255, b: 255}; // Default to white if parsing fails
+    }
+    
     drawPlayer() {
         const x = this.player.x;
         const y = this.player.y;
         const w = this.player.width;
         const h = this.player.height;
         
-        // Draw spaceship body (plane-like shape)
-        this.ctx.fillStyle = this.player.color;
+        // Get current colorway
+        const colorway = this.shipColorways[this.player.colorway] || this.shipColorways['blue'];
+        
+        // Draw spaceship body - sleek futuristic design with user's colorway
+        this.ctx.fillStyle = colorway.main;
         this.ctx.beginPath();
-        this.ctx.moveTo(x + w/2, y); // Nose
-        this.ctx.lineTo(x + w, y + h/2); // Right wing
-        this.ctx.lineTo(x + w*0.8, y + h); // Right back
-        this.ctx.lineTo(x + w*0.2, y + h); // Left back
-        this.ctx.lineTo(x, y + h/2); // Left wing
+        // Main hull - elongated teardrop shape
+        this.ctx.moveTo(x + w/2, y + h*0.1); // Top point
+        this.ctx.lineTo(x + w*0.8, y + h*0.3); // Right side
+        this.ctx.lineTo(x + w*0.9, y + h*0.7); // Right back
+        this.ctx.lineTo(x + w*0.7, y + h*0.9); // Right bottom
+        this.ctx.lineTo(x + w*0.3, y + h*0.9); // Left bottom
+        this.ctx.lineTo(x + w*0.1, y + h*0.7); // Left back
+        this.ctx.lineTo(x + w*0.2, y + h*0.3); // Left side
         this.ctx.closePath();
         this.ctx.fill();
         
-        // Draw cockpit
-        this.ctx.fillStyle = '#ffffff';
+        // Draw wing details
+        this.ctx.fillStyle = colorway.wing;
         this.ctx.beginPath();
-        this.ctx.arc(x + w/2, y + h/2, w/6, 0, 2 * Math.PI);
+        this.ctx.moveTo(x + w*0.2, y + h*0.3);
+        this.ctx.lineTo(x + w*0.1, y + h*0.5);
+        this.ctx.lineTo(x + w*0.3, y + h*0.6);
+        this.ctx.closePath();
         this.ctx.fill();
         
-        // Draw current ammo laser blaster
-        const ammoType = this.ammoTypes[this.currentBank];
-        this.ctx.fillStyle = ammoType.color;
-        this.ctx.fillRect(x + w/2 - 2, y - 8, 4, 8);
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + w*0.8, y + h*0.3);
+        this.ctx.lineTo(x + w*0.9, y + h*0.5);
+        this.ctx.lineTo(x + w*0.7, y + h*0.6);
+        this.ctx.closePath();
+        this.ctx.fill();
         
-        // Draw ammo glow effect
+        // Add bright trim lines
+        this.ctx.strokeStyle = colorway.trim;
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + w*0.2, y + h*0.3);
+        this.ctx.lineTo(x + w*0.8, y + h*0.3);
+        this.ctx.stroke();
+        
+        // Draw cockpit - bright glass
+        this.ctx.fillStyle = colorway.cockpit;
+        this.ctx.beginPath();
+        this.ctx.ellipse(x + w/2, y + h*0.4, w*0.15, h*0.08, 0, 0, 2 * Math.PI);
+        this.ctx.fill();
+        
+        // Draw cockpit highlight
+        this.ctx.fillStyle = colorway.highlight;
+        this.ctx.beginPath();
+        this.ctx.ellipse(x + w/2, y + h*0.35, w*0.08, h*0.04, 0, 0, 2 * Math.PI);
+        this.ctx.fill();
+        
+        // Draw enhanced engine glow
+        this.ctx.fillStyle = colorway.engine;
+        this.ctx.shadowColor = colorway.engine;
+        this.ctx.shadowBlur = 15;
+        // Main engine
+        this.ctx.fillRect(x + w*0.35, y + h*0.85, w*0.3, h*0.15);
+        // Side engines
+        this.ctx.fillRect(x + w*0.1, y + h*0.75, w*0.15, h*0.1);
+        this.ctx.fillRect(x + w*0.75, y + h*0.75, w*0.15, h*0.1);
+        this.ctx.shadowBlur = 0;
+        
+        // Draw current ammo laser blaster - size and color match ammunition exactly
+        const ammoType = this.ammoTypes[this.currentBank];
+        
+        // Calculate gun size to match bullet size exactly
+        const gunWidth = 6 + (ammoType.power * 2);  // Same as bullet width
+        const gunHeight = 12 + (ammoType.power * 2); // Same as bullet height
+        const gunX = x + w/2 - gunWidth/2;  // Center on ship
+        const gunY = y - gunHeight;
+        
+        // Draw gun barrel
+        this.ctx.fillStyle = ammoType.color;
+        this.ctx.fillRect(gunX, gunY, gunWidth, gunHeight);
+        
+        // Draw gun glow effect
         this.ctx.shadowColor = ammoType.color;
         this.ctx.shadowBlur = 10;
-        this.ctx.fillRect(x + w/2 - 1, y - 6, 2, 6);
+        this.ctx.fillRect(gunX + gunWidth/4, gunY + gunHeight/4, gunWidth/2, gunHeight/2);
         this.ctx.shadowBlur = 0;
+        
+        // Draw gun pulse effect when firing
+        const currentTime = Date.now();
+        const timeSincePulse = currentTime - this.gunPulseTime;
+        if (timeSincePulse < this.gunPulseDuration) {
+            const pulseIntensity = 1 - (timeSincePulse / this.gunPulseDuration);
+            const pulseSize = 20 * pulseIntensity;
+            const pulseAlpha = pulseIntensity * 0.6;
+            
+            this.ctx.shadowColor = ammoType.color;
+            this.ctx.shadowBlur = pulseSize;
+            this.ctx.globalAlpha = pulseAlpha;
+            this.ctx.fillStyle = ammoType.color;
+            this.ctx.fillRect(gunX - pulseSize/2, gunY - pulseSize/2, gunWidth + pulseSize, gunHeight + pulseSize);
+            this.ctx.globalAlpha = 1.0;
+            this.ctx.shadowBlur = 0;
+        }
+        
+        // Draw bank number on gun (consistent size, black text for light colors)
+        // Determine text color based on ammunition color brightness
+        const color = ammoType.color;
+        const rgb = this.hexToRgb(color);
+        const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
+        const textColor = brightness > 128 ? '#000000' : '#ffffff'; // Black for light colors, white for dark
+        
+        this.ctx.fillStyle = textColor;
+        this.ctx.font = '12px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(this.currentBank.toString(), x + w/2, gunY + gunHeight/2 + 4);
+        
+        // Draw ammunition count indicator (small dots above gun)
+        const ammoCount = this.ammunitionBanks[this.currentBank].length;
+        const maxAmmo = this.maxAmmoPerBank;
+        const indicatorY = gunY - 8;
+        const indicatorWidth = Math.min(5, Math.ceil(ammoCount / (maxAmmo / 5))) * 3;
+        const indicatorStartX = x + w/2 - indicatorWidth/2;
+        
+        for (let i = 0; i < Math.min(5, Math.ceil(ammoCount / (maxAmmo / 5))); i++) {
+            this.ctx.fillStyle = ammoType.color;
+            this.ctx.fillRect(indicatorStartX + (i * 3), indicatorY, 2, 2);
+        }
     }
     
     drawEnemy(enemy) {
-        // Draw shield bubble
+        const centerX = enemy.x + enemy.width / 2;
+        const centerY = enemy.y + enemy.height / 2;
+        
+        // Draw shield bubble - shrinks as shield decreases
         if (enemy.shield > 0) {
-            this.ctx.strokeStyle = enemy.color;
-            this.ctx.lineWidth = 2;
+            const shieldRatio = enemy.shield / enemy.maxShield;
+            const bubbleRadius = (enemy.width / 2 + 15) * shieldRatio;
+            const bubbleAlpha = 0.3 + (shieldRatio * 0.4); // More opaque when stronger
+            
+            // Outer glow
+            this.ctx.shadowColor = enemy.color;
+            this.ctx.shadowBlur = 15;
+            this.ctx.fillStyle = `rgba(${this.hexToRgb(enemy.color).r}, ${this.hexToRgb(enemy.color).g}, ${this.hexToRgb(enemy.color).b}, ${bubbleAlpha * 0.5})`;
             this.ctx.beginPath();
-            this.ctx.arc(
-                enemy.x + enemy.width / 2, 
-                enemy.y + enemy.height / 2, 
-                enemy.width / 2 + 10, 
-                0, 
-                2 * Math.PI
-            );
+            this.ctx.arc(centerX, centerY, bubbleRadius + 5, 0, 2 * Math.PI);
+            this.ctx.fill();
+            
+            // Main bubble
+            this.ctx.shadowBlur = 0;
+            this.ctx.strokeStyle = enemy.color;
+            this.ctx.lineWidth = 2 + shieldRatio * 2;
+            this.ctx.fillStyle = `rgba(${this.hexToRgb(enemy.color).r}, ${this.hexToRgb(enemy.color).g}, ${this.hexToRgb(enemy.color).b}, ${bubbleAlpha})`;
+            this.ctx.beginPath();
+            this.ctx.arc(centerX, centerY, bubbleRadius, 0, 2 * Math.PI);
+            this.ctx.fill();
             this.ctx.stroke();
             
-            // Shield strength indicator
-            this.ctx.fillStyle = enemy.color;
-            this.ctx.fillRect(enemy.x - 5, enemy.y - 15, enemy.shield * 4, 3);
+            // Pulsing effect when shield is low
+            if (shieldRatio < 0.3) {
+                const pulseAlpha = (Math.sin(Date.now() * 0.01) + 1) * 0.3;
+                this.ctx.fillStyle = `rgba(255, 255, 255, ${pulseAlpha})`;
+                this.ctx.beginPath();
+                this.ctx.arc(centerX, centerY, bubbleRadius * 0.8, 0, 2 * Math.PI);
+                this.ctx.fill();
+            }
         }
         
-        // Draw enemy ship
-        this.ctx.fillStyle = enemy.fleeing ? '#888888' : enemy.color;
-        this.ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+        // Draw enemy ship with personality-based design
+        this.ctx.fillStyle = enemy.fleeing ? '#666666' : enemy.color;
         
-        // Draw enemy details
+        // Different ship shapes based on personality
+        this.ctx.beginPath();
+        switch (enemy.personality) {
+            case 'basic':
+                // Simple triangular ship
+                this.ctx.moveTo(centerX, enemy.y);
+                this.ctx.lineTo(enemy.x, enemy.y + enemy.height);
+                this.ctx.lineTo(enemy.x + enemy.width, enemy.y + enemy.height);
+                this.ctx.closePath();
+                break;
+                
+            case 'defensive':
+                // Rounded, defensive design
+                this.ctx.ellipse(centerX, centerY, enemy.width / 2, enemy.height / 2, 0, 0, 2 * Math.PI);
+                break;
+                
+            case 'agile':
+                // Sleek, streamlined design
+                this.ctx.moveTo(centerX, enemy.y);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.8, enemy.y + enemy.height * 0.2);
+                this.ctx.lineTo(enemy.x + enemy.width, centerY);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.8, enemy.y + enemy.height * 0.8);
+                this.ctx.lineTo(centerX, enemy.y + enemy.height);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.2, enemy.y + enemy.height * 0.8);
+                this.ctx.lineTo(enemy.x, centerY);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.2, enemy.y + enemy.height * 0.2);
+                this.ctx.closePath();
+                break;
+                
+            case 'aggressive':
+                // Sharp, angular design
+                this.ctx.moveTo(centerX, enemy.y);
+                this.ctx.lineTo(enemy.x + enemy.width, enemy.y + enemy.height * 0.3);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.8, enemy.y + enemy.height);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.2, enemy.y + enemy.height);
+                this.ctx.lineTo(enemy.x, enemy.y + enemy.height * 0.3);
+                this.ctx.closePath();
+                break;
+                
+            case 'tank':
+                // Blocky, heavy design with armor plating
+                this.ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                this.ctx.fillStyle = '#333333';
+                this.ctx.fillRect(enemy.x + 5, enemy.y + 5, enemy.width - 10, enemy.height - 10);
+                this.ctx.fillStyle = enemy.fleeing ? '#666666' : enemy.color;
+                this.ctx.fillRect(enemy.x + 10, enemy.y + 10, enemy.width - 20, enemy.height - 20);
+                break;
+                
+            case 'boss':
+                // Intimidating, spiky design
+                this.ctx.moveTo(centerX, enemy.y);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.7, enemy.y + enemy.height * 0.2);
+                this.ctx.lineTo(enemy.x + enemy.width, enemy.y + enemy.height * 0.4);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.8, centerY);
+                this.ctx.lineTo(enemy.x + enemy.width, enemy.y + enemy.height * 0.6);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.7, enemy.y + enemy.height * 0.8);
+                this.ctx.lineTo(centerX, enemy.y + enemy.height);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.3, enemy.y + enemy.height * 0.8);
+                this.ctx.lineTo(enemy.x, enemy.y + enemy.height * 0.6);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.2, centerY);
+                this.ctx.lineTo(enemy.x, enemy.y + enemy.height * 0.4);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.3, enemy.y + enemy.height * 0.2);
+                this.ctx.closePath();
+                break;
+                
+            default:
+                // Default rectangular design
+                this.ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+        }
+        this.ctx.fill();
+        
+        // Draw personality-based details
         this.ctx.fillStyle = '#ffffff';
-        this.ctx.fillRect(enemy.x + 5, enemy.y + 5, enemy.width - 10, 3);
+        this.ctx.font = '10px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(enemy.name, centerX, enemy.y - 5);
+        
+        // Draw behavior indicators
+        if (enemy.behavior === 'spiral') {
+            this.ctx.strokeStyle = '#ffff00';
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+            this.ctx.arc(centerX, centerY, 20, 0, enemy.spiralAngle);
+            this.ctx.stroke();
+        } else if (enemy.behavior === 'complex_pattern') {
+            // Draw complex pattern indicator
+            this.ctx.strokeStyle = '#ff00ff';
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+            for (let i = 0; i < 20; i++) {
+                const angle = (i / 20) * Math.PI * 2;
+                const radius = 15 + Math.sin(enemy.behaviorTimer * 0.1 + angle) * 5;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                if (i === 0) {
+                    this.ctx.moveTo(x, y);
+                } else {
+                    this.ctx.lineTo(x, y);
+                }
+            }
+            this.ctx.closePath();
+            this.ctx.stroke();
+        }
     }
     
     gameLoop() {
@@ -1502,9 +1972,10 @@ async function login() {
         return;
     }
     
+    console.log('Selected colorway:', selectedColorway);
     console.log('Calling game.login()');
     try {
-        const result = await game.login(username, password);
+        const result = await game.login(username, password, selectedColorway);
         console.log('game.login() completed, result:', result);
     } catch (error) {
         console.error('Error in game.login():', error);
@@ -1520,11 +1991,27 @@ async function register() {
         return;
     }
     
-    await game.register(username, password);
+    await game.register(username, password, selectedColorway);
 }
 
 function logout() {
     game.logout();
+}
+
+// Global variable to track selected colorway
+let selectedColorway = 'blue';
+
+function selectColorway(colorway) {
+    selectedColorway = colorway;
+    
+    // Update button borders to show selection
+    const colorways = ['blue', 'red', 'green', 'purple', 'orange'];
+    colorways.forEach(cw => {
+        const button = document.getElementById(`colorway-${cw}`);
+        if (button) {
+            button.style.border = cw === colorway ? '2px solid #00ff00' : '2px solid #666';
+        }
+    });
 }
 
 function startGame() {
