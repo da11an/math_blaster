@@ -86,31 +86,31 @@ class MentalMathGenerator:
         def l2_missing(): target=random.randint(6,20); left=random.randint(0,target); return f"{left} + ? = {target}", target-left
 
         # Level 3
-        def l3_tens(): t=random.randrange(10,100,10); o=random.randint(1,9); return (f"{t}+{o}", t+o) if random.choice([1,0]) else (f"{t}-{o}", t-o)
-        def l3_bridge(): a=random.randint(11,98); b=random.randint(2,9); return (f"{a}+{b}", a+b) if random.choice([1,0]) else (f"{a}-{b}", a-b)
+        def l3_tens(): t=random.randrange(10,100,10); o=random.randint(1,9); return (f"{t} + {o}", t+o) if random.choice([1,0]) else (f"{t} - {o}", t-o)
+        def l3_bridge(): a=random.randint(11,98); b=random.randint(2,9); return (f"{a} + {b}", a+b) if random.choice([1,0]) else (f"{a} - {b}", a-b)
         def l3_two(): a=random.randint(20,80); b,c=random.randint(5,15),random.randint(5,15); return (f"{a}+{b}-{c}", a+b-c) if random.choice([1,0]) else (f"{a}-{b}+{c}", a-b+c)
 
         # Level 4
-        def l4_mult(): a,b=random.choice([0,1,2,3,4,5,10]),random.choice([0,1,2,3,4,5,10]); return f"{a}×{b}", a*b
-        def l4_div(): b=random.choice([1,2,3,4,5,10]); c=random.randint(0,5); a=b*c; return f"{a}÷{b}", c
+        def l4_mult(): a,b=random.choice([0,1,2,3,4,5,10]),random.choice([0,1,2,3,4,5,10]); return f"{a} × {b}", a*b
+        def l4_div(): b=random.choice([1,2,3,4,5,10]); c=random.randint(0,5); a=b*c; return f"{a} ÷ {b}", c
         def l4_rep(): term=random.randint(2,5); times=random.randint(2,5); return " + ".join([str(term)]*times), term*times
 
         # Level 5
-        def l5_mult(): a,b=random.randint(0,12),random.randint(0,12); return f"{a}×{b}", a*b
-        def l5_div(): b=random.randint(1,12); c=random.randint(0,12); return f"{b*c}÷{b}", c
-        def l5_fact(): a,b=random.randint(2,12),random.randint(2,12); c=a*b; form=random.choice([f"{a}×{b}",f"{b}×{a}",f"{c}÷{a}",f"{c}÷{b}"]); return form,c if "×" in form else (form,b if form.endswith(str(a)) else a)
+        def l5_mult(): a,b=random.randint(0,12),random.randint(0,12); return f"{a} × {b}", a*b
+        def l5_div(): b=random.randint(1,12); c=random.randint(0,12); return f"{b*c} ÷ {b}", c
+        def l5_fact(): a,b=random.randint(2,12),random.randint(2,12); c=a*b; form=random.choice([f"{a} × {b}",f"{b} × {a}",f"{c} ÷ {a}",f"{c} ÷ {b}"]); return form,c if "×" in form else (form,b if form.endswith(str(a)) else a)
 
         # Level 6
-        def l6_two(): a,b=random.randint(30,99),random.randint(12,68); return (f"{a}+{b}", a+b) if random.choice([1,0]) else (f"{max(a,b)}-{min(a,b)}", abs(a-b))
-        def l6_tidy(): base=random.choice([10,20,25,50,100]); k=random.randint(2,12); return f"{k}×{base}", k*base
-        def l6_round(): a=random.randint(40,90); b=random.randint(8,19); return f"{a}+{b}", a+b
+        def l6_two(): a,b=random.randint(30,99),random.randint(12,68); return (f"{a} + {b}", a+b) if random.choice([1,0]) else (f"{max(a,b)} - {min(a,b)}", abs(a-b))
+        def l6_tidy(): base=random.choice([10,20,25,50,100]); k=random.randint(2,12); return f"{k} × {base}", k*base
+        def l6_round(): a=random.randint(40,90); b=random.randint(8,19); return f"{a} + {b}", a+b
 
         # Level 7
-        def l7_two(): a=random.randint(40,150); b,c=random.choice([6,8,9,10,12,15,20]),random.choice([6,8,9,10,12,15,20]); form=random.choice([f"{a}+{b}×{c}",f"{a}-{b}×{c}"]); return form, eval(form.replace("×","*"))
-        def l7_special(): n=random.randint(11,19); m=random.choice([9,11]); return f"{m}×{n}", m*n
+        def l7_two(): a=random.randint(40,150); b,c=random.choice([6,8,9,10,12,15,20]),random.choice([6,8,9,10,12,15,20]); form=random.choice([f"{a} + {b} × {c}",f"{a} - {b} × {c}"]); return form, eval(form.replace("×","*").replace(" ",""))
+        def l7_special(): n=random.randint(11,19); m=random.choice([9,11]); return f"{m} × {n}", m*n
 
         # Level 8
-        def l8_dec(): a=random.choice([x/10 for x in range(10,200,5)]); b=random.choice([x/10 for x in range(5,80,5)]); return (f"{a:.1f}+{b:.1f}", a+b) if random.choice([1,0]) else (f"{max(a,b):.1f}-{min(a,b):.1f}", abs(a-b))
+        def l8_dec(): a=random.choice([x/10 for x in range(10,200,5)]); b=random.choice([x/10 for x in range(5,80,5)]); return (f"{a:.1f} + {b:.1f}", a+b) if random.choice([1,0]) else (f"{max(a,b):.1f} - {min(a,b):.1f}", abs(a-b))
         def l8_pct(): pct=random.choice([10,20,25,50,5,15]); base=random.choice([20,30,40,60,80,100,120,150,200,250,300]); return f"{pct}% of {base}", base*pct/100
 
         # Level 9
@@ -118,8 +118,8 @@ class MentalMathGenerator:
         def l9_rate(): items=random.randint(2,9); price=items*random.choice([2,3,5,10]); return f"If {items} items cost {price}, cost of 1?", price/items
 
         # Level 10
-        def l10_chain(): pct=random.choice([10,15,20,25]); base=random.choice([40,80,120,200]); adj=random.randint(5,20); return f"{pct}% of {base} then +{adj}", base*pct/100+adj
-        def l10_mix(): a=random.choice([60,75,80,100,120,150,200]); b=random.choice([5,10,20,25]); c=random.randint(6,20); expr=f"({a}÷{b})+{c}"; return expr, a/b+c
+        def l10_chain(): pct=random.choice([10,15,20,25]); base=random.choice([40,80,120,200]); adj=random.randint(5,20); return f"{pct}% of {base} then + {adj}", base*pct/100+adj
+        def l10_mix(): a=random.choice([60,75,80,100,120,150,200]); b=random.choice([5,10,20,25]); c=random.randint(6,20); expr=f"({a} ÷ {b}) + {c}"; return expr, a/b+c
 
         return {
             1:[ProblemTemplate("add10",l1_add,3),ProblemTemplate("sub10",l1_sub,3),ProblemTemplate("make10",l1_make10,2)],

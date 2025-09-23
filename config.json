@@ -1,6 +1,6 @@
 {
     "math_generators": {
-        "enabled": ["mental"],
+        "enabled": ["mental", "simple", "fact_ladder"],
         "default": "mental",
         "fallback": "simple"
     },

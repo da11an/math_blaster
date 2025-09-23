@@ -123,6 +123,11 @@ class SpaceshipGame {
             problemStartTime: null // Track when problem was generated
         };
         
+        // Available math generators
+        this.availableGenerators = [];
+        this.selectedGenerator = 'mental'; // Default generator
+        this.mathProblemGenerationInProgress = false; // Prevent multiple simultaneous calls
+        
         // Visual effects
         this.particles = [];
         this.explosions = [];
@@ -596,13 +601,14 @@ class SpaceshipGame {
         this.drawAmmoBanks();
     }
     
-    toggleMathMode() {
+    async toggleMathMode() {
         if (this.gameState === 'playing') {
             this.gameState = 'math';
             this.mathMode.active = true;
             this.mathMode.targetBank = 1; // Default to bank 1
             this.updateMathBankDisplay();
             this.updateMathLog(); // Initialize the log display
+            await this.loadMathGenerators(); // Load available generators
             this.generateMathProblem();
             document.getElementById('mathMode').style.display = 'block';
             document.getElementById('mathAnswer').focus();
@@ -616,6 +622,67 @@ class SpaceshipGame {
         this.mathMode.active = false;
         document.getElementById('mathMode').style.display = 'none';
         document.getElementById('mathAnswer').value = '';
+    }
+    
+    async loadMathGenerators() {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/generators`);
+            const data = await response.json();
+            
+            if (data.success) {
+                const select = document.getElementById('mathGeneratorSelect');
+                const description = document.getElementById('generatorDescription');
+                
+                // Clear existing options
+                select.innerHTML = '';
+                
+                // Add options for each generator
+                data.generators.forEach(generator => {
+                    const option = document.createElement('option');
+                    option.value = generator.type;
+                    option.textContent = generator.name;
+                    select.appendChild(option);
+                });
+                
+                // Store generators and set default selection
+                this.availableGenerators = data.generators;
+                
+                if (data.generators.length > 0) {
+                    const defaultGen = data.generators[0];
+                    select.value = defaultGen.type;
+                    description.textContent = defaultGen.description;
+                    this.selectedGenerator = defaultGen.type;
+                    console.log('🎯 Initial generator set to:', this.selectedGenerator);
+                }
+                
+                // Remove existing event listeners and add new one
+                const newSelect = select.cloneNode(true);
+                select.parentNode.replaceChild(newSelect, select);
+                
+                // Add change event listener to update description and regenerate problem
+                newSelect.addEventListener('change', (e) => {
+                    const selectedGen = data.generators.find(g => g.type === e.target.value);
+                    if (selectedGen) {
+                        console.log('🔄 Generator changed to:', selectedGen.type);
+                        description.textContent = selectedGen.description;
+                        this.selectedGenerator = selectedGen.type;
+                        console.log('Updated selectedGenerator to:', this.selectedGenerator);
+                        // Regenerate problem with new generator
+                        this.generateMathProblem();
+                    }
+                });
+                
+                console.log('Generators loaded successfully:', data.generators);
+                return data.generators;
+                
+            } else {
+                console.error('Failed to load generators:', data.message);
+                return [];
+            }
+        } catch (error) {
+            console.error('Error loading generators:', error);
+            return [];
+        }
     }
     
     updateMathBankDisplay() {
@@ -657,7 +724,7 @@ class SpaceshipGame {
         this.mathMode.targetBank = bankNumber;
         this.updateMathBankDisplay();
         this.updateMathLog(); // Update log when switching banks
-        this.generateMathProblem();
+        this.generateMathProblem(); // Generate new problem with current generator selection
     }
     
     mathSelectNextBank() {
@@ -689,11 +756,25 @@ class SpaceshipGame {
     }
     
     async generateMathProblem() {
+        // Prevent multiple simultaneous calls
+        if (this.mathProblemGenerationInProgress) {
+            console.log('⏸️ Math problem generation already in progress, skipping duplicate call');
+            return;
+        }
+        
+        this.mathProblemGenerationInProgress = true;
+        
         try {
             // Record the start time for this problem
             this.mathMode.problemStartTime = Date.now();
             
-            const mathLevel = this.getMathLevelForBank(this.mathMode.targetBank);
+            const selectedGenerator = this.selectedGenerator || 'mental'; // Use stored generator or fallback
+            const mathLevel = this.getMathLevelForBank(this.mathMode.targetBank, selectedGenerator);
+            const callId = Math.random().toString(36).substr(2, 9); // Unique ID for this call
+            
+            console.log(`🚀 [${callId}] Generating math problem:`, { level: mathLevel, generator_type: selectedGenerator });
+            console.log(`📊 [${callId}] Selected generator from property:`, this.selectedGenerator);
+            console.log(`📋 [${callId}] Available generators:`, this.availableGenerators);
             
             const response = await fetch(`${this.apiBaseUrl}/generate_math_problem`, {
                 method: 'POST',
@@ -701,35 +782,54 @@ class SpaceshipGame {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    level: mathLevel
-                    // Let the factory decide which generator to use based on config
+                    level: mathLevel,
+                    generator_type: selectedGenerator
                 })
             });
             
             const data = await response.json();
             
+            console.log(`📥 [${callId}] API Response:`, data);
+            console.log(`📊 [${callId}] Response status:`, response.status);
+            
             if (data.success) {
+                console.log(`✅ [${callId}] Using API-generated problem:`, data.problem.question);
                 this.mathMode.currentProblem = data.problem.question;
                 this.mathMode.correctAnswer = data.problem.answer;
                 this.mathMode.currentLevel = data.problem.level;
                 this.mathMode.levelName = data.problem.level_name;
                 
+                console.log(`📝 [${callId}] Setting problem display to:`, this.mathMode.currentProblem);
                 document.getElementById('mathProblem').textContent = this.mathMode.currentProblem + ' = ?';
                 // Clear any previous result
                 document.getElementById('mathResult').style.display = 'none';
+                console.log(`🎯 [${callId}] API problem successfully displayed`);
             } else {
-                console.error('Failed to generate math problem:', data.message);
+                console.error(`❌ [${callId}] Failed to generate math problem:`, data.message);
+                console.log(`🔄 [${callId}] Falling back to simple math generation`);
                 // Fallback to simple generation
                 this.generateSimpleMathProblem();
             }
         } catch (error) {
-            console.error('Error generating math problem:', error);
+            console.error(`💥 [${callId}] Error generating math problem:`, error);
             // Fallback to simple generation
             this.generateSimpleMathProblem();
+        } finally {
+            // Always reset the flag when done
+            this.mathProblemGenerationInProgress = false;
         }
     }
     
     generateSimpleMathProblem() {
+        const fallbackId = Math.random().toString(36).substr(2, 9);
+        console.log(`🔄 [${fallbackId}] FALLBACK: Generating simple math problem locally`);
+        
+        // Check if we already have a problem from API (prevent overwriting)
+        if (this.mathMode.currentProblem && (this.mathMode.currentProblem.includes('×') || this.mathMode.currentProblem.includes('÷'))) {
+            console.log(`⚠️ [${fallbackId}] SKIPPING FALLBACK: API problem already exists with proper symbols:`, this.mathMode.currentProblem);
+            return;
+        }
+        
         // Record the start time for this problem
         this.mathMode.problemStartTime = Date.now();
         
@@ -766,6 +866,7 @@ class SpaceshipGame {
         this.mathMode.currentProblem = `${a} ${operation} ${b}`;
         this.mathMode.correctAnswer = answer;
         
+        console.log(`📝 [${fallbackId}] Setting problem display to:`, this.mathMode.currentProblem);
         document.getElementById('mathProblem').textContent = this.mathMode.currentProblem + ' = ?';
         // Clear any previous result
         document.getElementById('mathResult').style.display = 'none';
@@ -784,19 +885,53 @@ class SpaceshipGame {
         }
     }
     
-    getMathLevelForBank(bankNumber) {
-        // Map bank numbers to math difficulty levels (1-10)
-        // Mental math generator has 10 levels, map to 10 banks
-        if (bankNumber <= 2) {
-            return 1;  // Easy math for banks 1-2
-        } else if (bankNumber <= 4) {
-            return 3;  // Medium math for banks 3-4
-        } else if (bankNumber <= 6) {
-            return 5;  // Hard math for banks 5-6
-        } else if (bankNumber <= 8) {
-            return 7;  // Expert math for banks 7-8
+    getMathLevelForBank(bankNumber, generatorType = 'mental') {
+        // Map bank numbers to appropriate math difficulty levels based on generator
+        if (generatorType === 'simple') {
+            // Simple math generator has 4 levels (1-4)
+            if (bankNumber <= 2) {
+                return 1;  // Easy math for banks 1-2
+            } else if (bankNumber <= 4) {
+                return 2;  // Medium math for banks 3-4
+            } else if (bankNumber <= 6) {
+                return 3;  // Hard math for banks 5-6
+            } else {
+                return 4;  // Expert math for banks 7-9
+            }
+        } else if (generatorType === 'fact_ladder') {
+            // Fact ladder generator has 9 levels (1-9)
+            if (bankNumber <= 1) {
+                return 1;  // Basic addition for bank 1
+            } else if (bankNumber <= 2) {
+                return 2;  // Basic subtraction for bank 2
+            } else if (bankNumber <= 3) {
+                return 3;  // Advanced addition for bank 3
+            } else if (bankNumber <= 4) {
+                return 4;  // Advanced subtraction for bank 4
+            } else if (bankNumber <= 5) {
+                return 5;  // Basic multiplication for bank 5
+            } else if (bankNumber <= 6) {
+                return 6;  // Basic division for bank 6
+            } else if (bankNumber <= 7) {
+                return 7;  // Advanced multiplication for bank 7
+            } else if (bankNumber <= 8) {
+                return 8;  // Advanced division for bank 8
+            } else {
+                return 9;  // Two-step problems for bank 9
+            }
         } else {
-            return 9;  // Master math for banks 9 (highest level)
+            // Mental math generator has 10 levels (1-10)
+            if (bankNumber <= 2) {
+                return 1;  // Easy math for banks 1-2
+            } else if (bankNumber <= 4) {
+                return 3;  // Medium math for banks 3-4
+            } else if (bankNumber <= 6) {
+                return 5;  // Hard math for banks 5-6
+            } else if (bankNumber <= 8) {
+                return 7;  // Expert math for banks 7-8
+            } else {
+                return 9;  // Master math for banks 9 (highest level)
+            }
         }
     }
     
@@ -839,7 +974,7 @@ class SpaceshipGame {
         }
         
         const responseTime = (Date.now() - this.mathMode.problemStartTime) / 1000; // Convert to seconds
-        const halfLife = 2; // 2 second half-life
+        const halfLife = 1; // X second half-life
         const initialReward = 100;
         const minReward = 10;
         

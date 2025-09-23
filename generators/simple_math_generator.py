@@ -33,12 +33,12 @@ class SimpleMathGenerator(MathGeneratorInterface):
             b = random.randint(1, a)
             answer = a - b
         elif operation == '*':
-            a = random.randint(1, min(12, max_num))
-            b = random.randint(1, min(12, max_num))
+            a = random.randint(1, max_num)
+            b = random.randint(1, max_num)
             answer = a * b
         elif operation == '/':
-            b = random.randint(2, min(12, max_num))
-            answer = random.randint(1, min(12, max_num))
+            b = random.randint(2, max_num)
+            answer = random.randint(1, max_num)
             a = b * answer
         
         # Convert operation symbols to proper mathematical notation
@@ -78,12 +78,14 @@ class SimpleMathGenerator(MathGeneratorInterface):
         return names.get(level, f"Level {level}")
     
     def _get_max_number_for_level(self, level: int) -> int:
-        """Map level to max number range (original logic)"""
-        if level <= 2:
-            return 10  # Easy math for levels 1-2
-        elif level <= 4:
-            return 50  # Medium math for levels 3-4
-        elif level <= 6:
-            return 100 # Hard math for levels 5-6
+        """Map level to max number range (corrected logic)"""
+        if level == 1:
+            return 10  # Easy math for level 1
+        elif level == 2:
+            return 50  # Medium math for level 2
+        elif level == 3:
+            return 100 # Hard math for level 3
+        elif level == 4:
+            return 500 # Expert math for level 4
         else:
-            return 500 # Expert math for levels 7+
+            return 500 # Default to expert for any other level

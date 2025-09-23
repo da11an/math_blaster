@@ -6,9 +6,15 @@ Handles user authentication and data persistence
 
 import json
 import os
+from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 from user_data import user_manager
+
+def log_with_timestamp(message):
+    """Log a message with timestamp"""
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    print(f"[{timestamp}] {message}")
 
 class APIHandler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
@@ -26,6 +32,8 @@ class APIHandler(BaseHTTPRequestHandler):
         
         if path == '/api/users':
             self.handle_list_users()
+        elif path == '/api/generators':
+            self.handle_get_generators()
         elif path.startswith('/api/user/'):
             username = path.split('/')[-1]
             self.handle_get_user(username)
@@ -183,8 +191,12 @@ class APIHandler(BaseHTTPRequestHandler):
             level = data.get('level', 1)
             generator_type = data.get('generator_type', None)  # Let factory decide default
             
+            # Log the request details
+            log_with_timestamp(f"🧮 Math Problem Request: Level={level}, Generator={generator_type}")
+            
             # Validate level
             if not isinstance(level, int) or level < 1:
+                log_with_timestamp(f"❌ Invalid level: {level}")
                 self.send_json_response(400, {
                     'success': False,
                     'message': 'Level must be a positive integer'
@@ -195,8 +207,14 @@ class APIHandler(BaseHTTPRequestHandler):
             factory = MathGeneratorFactory()
             generator = factory.create_generator(generator_type)
             
+            # Log generator details
+            generator_name = generator.__class__.__name__
+            max_level = generator.get_max_level()
+            log_with_timestamp(f"📊 Using Generator: {generator_name} (Max Level: {max_level})")
+            
             # Check if level is valid for this generator
             if level > generator.get_max_level():
+                log_with_timestamp(f"❌ Level {level} exceeds max level {max_level} for {generator_name}")
                 self.send_json_response(400, {
                     'success': False,
                     'message': f'Level {level} not supported. Max level: {generator.get_max_level()}'
@@ -205,6 +223,9 @@ class APIHandler(BaseHTTPRequestHandler):
             
             # Generate problem
             problem = generator.generate_problem(level)
+            
+            # Log the generated problem
+            log_with_timestamp(f"✅ Generated: '{problem.question}' = {problem.answer} (Type: {problem.problem_type})")
             
             self.send_json_response(200, {
                 'success': True,
@@ -219,6 +240,7 @@ class APIHandler(BaseHTTPRequestHandler):
             })
             
         except Exception as e:
+            log_with_timestamp(f"💥 Error generating math problem: {str(e)}")
             self.send_json_response(500, {
                 'success': False,
                 'message': f'Error generating math problem: {str(e)}'
@@ -231,6 +253,68 @@ class APIHandler(BaseHTTPRequestHandler):
             'success': True,
             'users': users
         })
+    
+    def handle_get_generators(self):
+        """Handle getting available math generators"""
+        try:
+            from generators.math_generator_factory import MathGeneratorFactory
+            
+            log_with_timestamp("🔧 Generators Request: Loading available math generators...")
+            
+            factory = MathGeneratorFactory()
+            available_generators = factory.get_available_generators()
+            
+            log_with_timestamp(f"📋 Available generators: {available_generators}")
+            
+            # Get descriptions for each generator
+            generators_info = []
+            for gen_type in available_generators:
+                try:
+                    generator = factory.create_generator(gen_type)
+                    max_level = generator.get_max_level()
+                    
+                    if gen_type == 'mental':
+                        description = "Progressive difficulty with specialized problem types (Levels 1-10)"
+                    elif gen_type == 'simple':
+                        description = "Basic arithmetic operations (Levels 1-4)"
+                    elif gen_type == 'fact_ladder':
+                        description = "Structured progression through math facts (Levels 1-9)"
+                    else:
+                        description = f"Math generator with {max_level} levels"
+                    
+                    # Generate proper name for each generator type
+                    if gen_type == 'fact_ladder':
+                        name = 'Fact Ladder Math'
+                    else:
+                        name = gen_type.title() + ' Math'
+                    
+                    generators_info.append({
+                        'type': gen_type,
+                        'name': name,
+                        'description': description,
+                        'max_level': max_level
+                    })
+                    
+                    log_with_timestamp(f"✅ Loaded generator: {gen_type.title()} Math (Levels 1-{max_level})")
+                    
+                except Exception as e:
+                    log_with_timestamp(f"❌ Failed to load generator {gen_type}: {str(e)}")
+                    # Skip generators that can't be instantiated
+                    continue
+            
+            log_with_timestamp(f"🎯 Returning {len(generators_info)} generators to client")
+            
+            self.send_json_response(200, {
+                'success': True,
+                'generators': generators_info
+            })
+            
+        except Exception as e:
+            log_with_timestamp(f"💥 Error getting generators: {str(e)}")
+            self.send_json_response(500, {
+                'success': False,
+                'message': f'Error getting generators: {str(e)}'
+            })
     
     def send_json_response(self, status_code, data):
         """Send JSON response with CORS headers"""
@@ -258,8 +342,10 @@ def main():
     print("  POST /api/register - User registration")
     print("  POST /api/save_ammunition - Save ammunition banks")
     print("  POST /api/save_stats - Save game statistics")
+    print("  POST /api/generate_math_problem - Generate math problem")
     print("  GET /api/user/{username} - Get user data")
     print("  GET /api/users - List all users")
+    print("  GET /api/generators - Get available math generators")
     print("Press Ctrl+C to stop the server")
     print("=" * 40)
     
