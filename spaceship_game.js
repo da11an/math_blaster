@@ -53,6 +53,9 @@ class SpaceshipGame {
         // Current bank selection (start with basic infinite ammo)
         this.currentBank = 0;
         
+        // Blast mode: 'single' or 'triple'
+        this.blastMode = 'single';
+        
         // Gun pulse effect
         this.gunPulseTime = 0;
         this.gunPulseDuration = 200; // milliseconds
@@ -499,6 +502,9 @@ class SpaceshipGame {
             } else if (e.code === 'KeyF' && this.gameState === 'playing') {
                 e.preventDefault();
                 this.findUpgrade();
+            } else if (e.code === 'KeyS' && this.gameState === 'playing') {
+                e.preventDefault();
+                this.toggleBlastMode();
             } else if (e.code === 'KeyF' && this.gameState === 'math') {
                 e.preventDefault();
                 this.mathSelectNextBank();
@@ -622,6 +628,35 @@ class SpaceshipGame {
         this.mathMode.active = false;
         document.getElementById('mathMode').style.display = 'none';
         document.getElementById('mathAnswer').value = '';
+    }
+    
+    toggleBlastMode() {
+        this.blastMode = this.blastMode === 'single' ? 'triple' : 'single';
+        this.showBlastModeMessage();
+    }
+    
+    showBlastModeMessage() {
+        const message = document.createElement('div');
+        message.textContent = `BLAST MODE: ${this.blastMode.toUpperCase()}`;
+        message.style.position = 'absolute';
+        message.style.top = '80px';
+        message.style.left = '50%';
+        message.style.transform = 'translateX(-50%)';
+        message.style.color = this.blastMode === 'triple' ? '#ffff00' : '#00ff00';
+        message.style.fontSize = '16px';
+        message.style.zIndex = '30';
+        message.style.pointerEvents = 'none';
+        message.style.fontWeight = 'bold';
+        message.style.textShadow = '0 0 10px currentColor';
+        
+        document.body.appendChild(message);
+        
+        // Remove message after 2 seconds
+        setTimeout(() => {
+            if (message.parentNode) {
+                message.parentNode.removeChild(message);
+            }
+        }, 2000);
     }
     
     async loadMathGenerators() {
@@ -1082,17 +1117,66 @@ class SpaceshipGame {
                     currentBank.pop();
                 }
                 
-                this.bullets.push({
-                    x: this.player.x + this.player.width / 2 - (6 + ammo.power * 2) / 2, // Center bullet
-                    y: this.player.y,
-                    width: 6 + (ammo.power * 2), // Bigger bullets for higher power
-                    height: 12 + (ammo.power * 2),
-                    speed: 8 + (ammo.power * 0.5), // Faster bullets for higher power
-                    damage: ammo.damage,
-                    color: ammo.color,
-                    power: ammo.power,
-                    bankNumber: this.currentBank // Add bank number for splash damage
-                });
+                // Create bullets based on blast mode
+                if (this.blastMode === 'single') {
+                    // Single blast - center bullet
+                    this.bullets.push({
+                        x: this.player.x + this.player.width / 2 - (6 + ammo.power * 2) / 2, // Center bullet
+                        y: this.player.y,
+                        width: 6 + (ammo.power * 2), // Bigger bullets for higher power
+                        height: 12 + (ammo.power * 2),
+                        speed: 8 + (ammo.power * 0.5), // Faster bullets for higher power
+                        damage: ammo.damage,
+                        color: ammo.color,
+                        power: ammo.power,
+                        bankNumber: this.currentBank // Add bank number for splash damage
+                    });
+                } else {
+                    // Triple blast - three bullets spread out
+                    const bulletWidth = 6 + (ammo.power * 2);
+                    const bulletHeight = 12 + (ammo.power * 2);
+                    const bulletSpeed = 8 + (ammo.power * 0.5);
+                    const spread = 20; // Distance between bullets
+                    
+                    // Left bullet
+                    this.bullets.push({
+                        x: this.player.x + this.player.width / 2 - bulletWidth / 2 - spread,
+                        y: this.player.y,
+                        width: bulletWidth,
+                        height: bulletHeight,
+                        speed: bulletSpeed,
+                        damage: ammo.damage,
+                        color: ammo.color,
+                        power: ammo.power,
+                        bankNumber: this.currentBank
+                    });
+                    
+                    // Center bullet
+                    this.bullets.push({
+                        x: this.player.x + this.player.width / 2 - bulletWidth / 2,
+                        y: this.player.y,
+                        width: bulletWidth,
+                        height: bulletHeight,
+                        speed: bulletSpeed,
+                        damage: ammo.damage,
+                        color: ammo.color,
+                        power: ammo.power,
+                        bankNumber: this.currentBank
+                    });
+                    
+                    // Right bullet
+                    this.bullets.push({
+                        x: this.player.x + this.player.width / 2 - bulletWidth / 2 + spread,
+                        y: this.player.y,
+                        width: bulletWidth,
+                        height: bulletHeight,
+                        speed: bulletSpeed,
+                        damage: ammo.damage,
+                        color: ammo.color,
+                        power: ammo.power,
+                        bankNumber: this.currentBank
+                    });
+                }
                 
                 // Trigger gun pulse effect
                 this.gunPulseTime = Date.now();
