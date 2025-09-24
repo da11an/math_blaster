@@ -28,12 +28,12 @@ class SpaceshipGame {
         
         // Ammunition system - 9 banks with different power levels
         this.ammunitionBanks = [];
-        this.maxAmmoPerBank = 1000;
+        this.maxAmmoPerBank = 500;
         this.ammoPerProblem = 10;
         
         // Initialize 10 ammunition banks with increasing power (0-9)
         this.ammoTypes = [
-            { power: 0, color: '#666666', damage: 1, name: 'Peanuts', infinite: true, splashRadius: 0 },    // Bank 0 - Infinite
+            { power: 0, color: '#666666', damage: 1, name: 'Zap', infinite: true, splashRadius: 0 },    // Bank 0 - Infinite
             { power: 1, color: '#00ff00', damage: 2, name: 'Pulse', splashRadius: 10 },   // Bank 1
             { power: 2, color: '#88ff00', damage: 3, name: 'Beam', splashRadius: 20 },   // Bank 2
             { power: 3, color: '#ffff00', damage: 4, name: 'Flare', splashRadius: 30 },   // Bank 3
@@ -55,6 +55,10 @@ class SpaceshipGame {
         
         // Blast mode: 'single' or 'triple'
         this.blastMode = 'single';
+        
+        // Firing rate control
+        this.lastShotTime = 0;
+        this.minShotInterval = 150; // Minimum milliseconds between shots (6.67 shots per second max)
         
         // Gun pulse effect
         this.gunPulseTime = 0;
@@ -605,6 +609,8 @@ class SpaceshipGame {
     updateAmmoDisplay() {
         // Update the new ammo banks display instead of the old one
         this.drawAmmoBanks();
+        // Also update weapon stats in status bar
+        this.drawScoreAndLevel();
     }
     
     async toggleMathMode() {
@@ -1106,19 +1112,27 @@ class SpaceshipGame {
     
     shoot() {
         if (this.gameState === 'playing') {
+            // Check firing rate limit
+            const currentTime = Date.now();
+            if (currentTime - this.lastShotTime < this.minShotInterval) {
+                return; // Too soon to fire again
+            }
+            this.lastShotTime = currentTime;
+            
             const currentBank = this.ammunitionBanks[this.currentBank];
             
             // Check if we have ammo (bank 0 is infinite, others need ammo)
-            if (this.currentBank === 0 || currentBank.length > 0) {
+            // For triple shots, need 3 ammo; for single shots, need 1 ammo
+            const ammoNeeded = this.blastMode === 'triple' ? 3 : 1;
+            if (this.currentBank === 0 || currentBank.length >= ammoNeeded) {
                 const ammo = this.ammoTypes[this.currentBank];
-                
-                // Only consume ammo if not bank 0 (infinite)
-                if (this.currentBank !== 0) {
-                    currentBank.pop();
-                }
                 
                 // Create bullets based on blast mode
                 if (this.blastMode === 'single') {
+                    // Only consume ammo if not bank 0 (infinite)
+                    if (this.currentBank !== 0) {
+                        currentBank.pop(); // Single shot consumes 1 ammo
+                    }
                     // Single blast - center bullet
                     this.bullets.push({
                         x: this.player.x + this.player.width / 2 - (6 + ammo.power * 2) / 2, // Center bullet
@@ -1133,44 +1147,66 @@ class SpaceshipGame {
                     });
                 } else {
                     // Triple blast - three bullets spread out
+                    // Only consume ammo if not bank 0 (infinite)
+                    if (this.currentBank !== 0) {
+                        currentBank.pop(); // Triple shot consumes 1 ammo per bullet (3 total)
+                        currentBank.pop();
+                        currentBank.pop();
+                    }
+                    
                     const bulletWidth = 6 + (ammo.power * 2);
                     const bulletHeight = 12 + (ammo.power * 2);
                     const bulletSpeed = 8 + (ammo.power * 0.5);
                     const spread = 20; // Distance between bullets
+                    const flareAngle = ammo.power * 1; // 1 degree per power level
                     
-                    // Left bullet
+                    // Left bullet (angled outward)
+                    const leftAngle = -flareAngle * Math.PI / 180; // Convert to radians
+                    const leftVelX = Math.sin(leftAngle) * bulletSpeed;
+                    const leftVelY = -Math.cos(leftAngle) * bulletSpeed;
+                    
                     this.bullets.push({
                         x: this.player.x + this.player.width / 2 - bulletWidth / 2 - spread,
                         y: this.player.y,
                         width: bulletWidth,
                         height: bulletHeight,
                         speed: bulletSpeed,
+                        velX: leftVelX,
+                        velY: leftVelY,
                         damage: ammo.damage,
                         color: ammo.color,
                         power: ammo.power,
                         bankNumber: this.currentBank
                     });
                     
-                    // Center bullet
+                    // Center bullet (straight up)
                     this.bullets.push({
                         x: this.player.x + this.player.width / 2 - bulletWidth / 2,
                         y: this.player.y,
                         width: bulletWidth,
                         height: bulletHeight,
                         speed: bulletSpeed,
+                        velX: 0,
+                        velY: -bulletSpeed,
                         damage: ammo.damage,
                         color: ammo.color,
                         power: ammo.power,
                         bankNumber: this.currentBank
                     });
                     
-                    // Right bullet
+                    // Right bullet (angled outward)
+                    const rightAngle = flareAngle * Math.PI / 180; // Convert to radians
+                    const rightVelX = Math.sin(rightAngle) * bulletSpeed;
+                    const rightVelY = -Math.cos(rightAngle) * bulletSpeed;
+                    
                     this.bullets.push({
                         x: this.player.x + this.player.width / 2 - bulletWidth / 2 + spread,
                         y: this.player.y,
                         width: bulletWidth,
                         height: bulletHeight,
                         speed: bulletSpeed,
+                        velX: rightVelX,
+                        velY: rightVelY,
                         damage: ammo.damage,
                         color: ammo.color,
                         power: ammo.power,
@@ -1598,8 +1634,14 @@ class SpaceshipGame {
         
         // Update bullets
         this.bullets = this.bullets.filter(bullet => {
-            bullet.y -= bullet.speed;
-            return bullet.y > 0;
+            // Use velocity components if available (for angled triple shots), otherwise use simple vertical movement
+            if (bullet.velX !== undefined && bullet.velY !== undefined) {
+                bullet.x += bullet.velX;
+                bullet.y += bullet.velY;
+            } else {
+                bullet.y -= bullet.speed;
+            }
+            return bullet.y > 0 && bullet.x > 0 && bullet.x < this.width;
         });
         
         // Spawn enemies
@@ -2063,8 +2105,54 @@ class SpaceshipGame {
         this.ctx.fillRect(gunX + gunWidth/4, gunY + gunHeight/4, gunWidth/2, gunHeight/2);
         this.ctx.shadowBlur = 0;
         
-        // Draw gun pulse effect when firing
+        // Draw blast mode indicator
+        this.ctx.fillStyle = this.blastMode === 'triple' ? '#ffff00' : '#00ff00';
+        this.ctx.shadowColor = this.blastMode === 'triple' ? '#ffff00' : '#00ff00';
+        this.ctx.shadowBlur = 5;
+        
+        if (this.blastMode === 'triple') {
+            // Draw three small dots for triple mode
+            const dotSize = 2;
+            const dotSpacing = 4;
+            const startX = gunX + gunWidth/2 - dotSpacing;
+            const dotY = gunY + gunHeight + 3;
+            
+            this.ctx.fillRect(startX, dotY, dotSize, dotSize);
+            this.ctx.fillRect(startX + dotSpacing, dotY, dotSize, dotSize);
+            this.ctx.fillRect(startX + dotSpacing * 2, dotY, dotSize, dotSize);
+        } else {
+            // Draw single dot for single mode
+            const dotSize = 3;
+            const dotX = gunX + gunWidth/2 - dotSize/2;
+            const dotY = gunY + gunHeight + 3;
+            
+            this.ctx.fillRect(dotX, dotY, dotSize, dotSize);
+        }
+        
+        this.ctx.shadowBlur = 0;
+        
+        // Draw firing cooldown indicator
         const currentTime = Date.now();
+        const timeSinceLastShot = currentTime - this.lastShotTime;
+        const cooldownProgress = Math.min(timeSinceLastShot / this.minShotInterval, 1);
+        
+        if (cooldownProgress < 1) {
+            // Draw cooldown bar below the blast mode indicator
+            const barWidth = gunWidth * 0.8;
+            const barHeight = 2;
+            const barX = gunX + (gunWidth - barWidth) / 2;
+            const barY = gunY + gunHeight + 8;
+            
+            // Background bar (dark)
+            this.ctx.fillStyle = 'rgba(100, 100, 100, 0.5)';
+            this.ctx.fillRect(barX, barY, barWidth, barHeight);
+            
+            // Progress bar (bright)
+            this.ctx.fillStyle = cooldownProgress < 0.5 ? '#ff4444' : '#44ff44';
+            this.ctx.fillRect(barX, barY, barWidth * cooldownProgress, barHeight);
+        }
+        
+        // Draw gun pulse effect when firing
         const timeSincePulse = currentTime - this.gunPulseTime;
         if (timeSincePulse < this.gunPulseDuration) {
             const pulseIntensity = 1 - (timeSincePulse / this.gunPulseDuration);
@@ -2312,14 +2400,14 @@ class SpaceshipGame {
             
             // Update fill bar - use ammunition color
             const ammoColor = this.ammoTypes[i].color;
-            // Bank 0 (Peanuts) is always full, others use actual fill percent
+            // Bank 0 (Zap) is always full, others use actual fill percent
             const displayFillPercent = i === 0 ? 1.0 : fillPercent;
             fillBar.style.height = `${displayFillPercent * 100}%`;
             fillBar.style.background = ammoColor;
             
             // Update bank number with colored circle when ammunition is available
             const bankNumber = bankElement.querySelector('.bank-number');
-            if (ammoCount > 0 || i === 0) { // Bank 0 (Peanuts) always shows circle
+            if (ammoCount > 0 || i === 0) { // Bank 0 (Zap) always shows circle
                 // Add colored circle background when ammunition is available
                 bankNumber.style.cssText = `
                     color: black;
@@ -2373,12 +2461,26 @@ class SpaceshipGame {
         // Update HTML elements instead of drawing on canvas
         const levelElement = document.getElementById('level');
         const scoreElement = document.getElementById('score');
+        const weaponNameElement = document.getElementById('weaponName');
+        const weaponDamageElement = document.getElementById('weaponDamage');
+        const weaponSplashElement = document.getElementById('weaponSplash');
         
         if (levelElement) {
             levelElement.textContent = this.level;
         }
         if (scoreElement) {
             scoreElement.textContent = this.score;
+        }
+        
+        // Update weapon stats
+        if (weaponNameElement && weaponDamageElement && weaponSplashElement) {
+            const currentAmmo = this.ammoTypes[this.currentBank];
+            weaponNameElement.textContent = currentAmmo.name;
+            weaponDamageElement.textContent = currentAmmo.damage;
+            weaponSplashElement.textContent = currentAmmo.splashRadius;
+            
+            // Color the weapon name to match the ammo color
+            weaponNameElement.style.color = currentAmmo.color;
         }
     }
     
