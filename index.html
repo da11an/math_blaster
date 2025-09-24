@@ -128,6 +128,7 @@
         .ammo-item.power-2 { background: #ffff00; }
         .ammo-item.power-3 { background: #ff8800; }
         .ammo-item.power-4 { background: #ff0000; }
+        
     </style>
 </head>
 <body>
@@ -162,12 +163,12 @@
         </div>
         
         <!-- Game Canvas -->
-        <canvas id="gameCanvas" width="800" height="600" style="border: 2px solid #00ff00;"></canvas>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
         
         <!-- Bottom UI Row -->
         <div style="display: flex; justify-content: center; width: 800px; align-items: center;">
             <!-- Center: Ammo Banks -->
-            <div id="ammoBanksContainer" style="display: flex; gap: 2px; height: 120px; overflow: hidden; position: relative; width: 800px; padding: 5px 0;"></div>
+            <div id="ammoBanksContainer" style="display: flex; gap: 2px; height: 120px; overflow: hidden; position: relative; width: 800px; padding: 5px 0; transform: translateY(9px);"></div>
         </div>
         
         <!-- Hidden UI for compatibility -->

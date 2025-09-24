@@ -2152,7 +2152,7 @@ class SpaceshipGame {
                 transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
                 position: absolute;
                 left: 0;
-                top: 5px;
+                top: 14px;
             `;
             container.appendChild(slidingContainer);
             
@@ -2290,14 +2290,24 @@ class SpaceshipGame {
                 // Math mode: highlight target bank with yellow border
                 bankElement.style.background = '#000000';
                 bankElement.style.border = '3px solid #ffff00';
+                bankElement.style.width = '76px'; // Original width
+                bankElement.style.height = '80px'; // Original height
+                bankElement.style.transform = 'translateY(0px)';
             } else if (isSelected) {
-                // Game mode: highlight selected bank with purple border
+                // Game mode: highlight selected bank by moving it up and expanding it
                 bankElement.style.background = '#000000';
-                bankElement.style.border = '4px solid #aa00ff';
+                bankElement.style.border = '1px solid #666';
+                // Move selected bank up by 6px and expand by 2px
+                bankElement.style.width = '78px'; // 76px + 2px
+                bankElement.style.height = '82px'; // 80px + 2px
+                bankElement.style.transform = 'translateY(-9px)';
             } else {
                 // Default styling - black background
                 bankElement.style.background = '#000000';
                 bankElement.style.border = '1px solid #666';
+                bankElement.style.width = '76px'; // Reset to original width
+                bankElement.style.height = '80px'; // Reset to original height
+                bankElement.style.transform = 'translateY(0px)';
             }
             
             // Update fill bar - use ammunition color
