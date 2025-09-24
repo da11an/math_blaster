@@ -686,43 +686,14 @@ class SpaceshipGame {
     }
     
     updateMathBankDisplay() {
-        const mathBankDisplay = document.getElementById('mathBankDisplay');
-        mathBankDisplay.innerHTML = '';
-        
-        // Show banks 1-9 (skip bank 0 since it's infinite)
-        for (let i = 1; i < 10; i++) {
-            const bankButton = document.createElement('div');
-            bankButton.className = 'math-bank-button';
-            bankButton.style.cssText = `
-                padding: 8px 12px;
-                margin: 2px;
-                border: 2px solid ${this.mathMode.targetBank === i ? '#ffffff' : this.ammoTypes[i].color};
-                background: ${this.mathMode.targetBank === i ? this.ammoTypes[i].color : 'rgba(0,0,0,0.7)'};
-                color: ${this.mathMode.targetBank === i ? '#000000' : this.ammoTypes[i].color};
-                cursor: pointer;
-                border-radius: 5px;
-                font-size: 12px;
-                text-align: center;
-                min-width: 80px;
-                transition: all 0.2s;
-            `;
-            
-            bankButton.innerHTML = `
-                <div style="font-weight: bold;">Bank ${i}</div>
-                <div style="font-size: 10px;">${this.ammoTypes[i].name}</div>
-                <div style="font-size: 10px;">${this.ammunitionBanks[i].length}/${this.maxAmmoPerBank}</div>
-            `;
-            
-            bankButton.onclick = () => this.selectMathBank(i);
-            mathBankDisplay.appendChild(bankButton);
-        }
-        
+        // Update the main ammunition bank display to highlight the selected bank
+        this.drawAmmoBanks();
         this.updateSelectedBankInfo();
     }
     
     selectMathBank(bankNumber) {
         this.mathMode.targetBank = bankNumber;
-        this.updateMathBankDisplay();
+        this.updateMathBankDisplay(); // This now updates the main ammunition bank
         this.updateMathLog(); // Update log when switching banks
         this.generateMathProblem(); // Generate new problem with current generator selection
     }
@@ -999,10 +970,6 @@ class SpaceshipGame {
             }
             
             this.updateAmmoDisplay();
-            // Also update the math bank display if in math mode
-            if (this.gameState === 'math') {
-                this.updateMathBankDisplay();
-            }
             // Auto-save user data
             this.saveUserData();
         }
@@ -1907,20 +1874,32 @@ class SpaceshipGame {
             
             // Create bank elements if they don't exist
             for (let i = 0; i < 10; i++) {
+                // Create a container for the bank and its text
+                const bankContainer = document.createElement('div');
+                bankContainer.className = `bank-container bank-${i}`;
+                bankContainer.style.cssText = `
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    margin: 0 1px;
+                    flex-shrink: 0;
+                `;
+                
+                // Create the visual bank element
                 const bankElement = document.createElement('div');
                 bankElement.className = `ammo-bank bank-${i}`;
                 bankElement.style.cssText = `
                     width: 76px;
                     height: 80px;
-                    background: #222;
+                    background: #000000;
                     border: 1px solid #666;
                     display: flex;
                     flex-direction: column;
                     align-items: center;
+                    justify-content: center;
                     padding: 2px;
                     cursor: pointer;
                     position: relative;
-                    flex-shrink: 0;
                     border-radius: 4px;
                     transition: all 0.3s ease;
                 `;
@@ -1935,25 +1914,37 @@ class SpaceshipGame {
                     position: absolute;
                     bottom: 0;
                     left: 0;
-                    opacity: 0.3;
+                    opacity: 1;
                     border-radius: 2px;
                     transition: height 0.3s ease, background-color 0.3s ease;
                 `;
                 bankElement.appendChild(fillBar);
                 
-                // Bank number
+                // Bank number (inside the bank)
                 const bankNumber = document.createElement('div');
                 bankNumber.className = 'bank-number';
-                bankNumber.textContent = i.toString();
+                bankNumber.textContent = i === 0 ? '∞' : i.toString();
                 bankNumber.style.cssText = `
                     color: white;
                     font-family: monospace;
-                    font-size: 12px;
+                    font-size: 14px;
                     font-weight: bold;
                     z-index: 1;
                     position: relative;
                 `;
                 bankElement.appendChild(bankNumber);
+                
+                // Add bank to container
+                bankContainer.appendChild(bankElement);
+                
+                // Create text container below the bank
+                const textContainer = document.createElement('div');
+                textContainer.className = 'bank-text';
+                textContainer.style.cssText = `
+                    width: 76px;
+                    margin-top: 4px;
+                    text-align: center;
+                `;
                 
                 // Ammo type name
                 const typeName = document.createElement('div');
@@ -1962,12 +1953,10 @@ class SpaceshipGame {
                 typeName.style.cssText = `
                     color: white;
                     font-family: monospace;
-                    font-size: 8px;
-                    text-align: center;
-                    z-index: 1;
-                    position: relative;
+                    font-size: 10px;
+                    margin-bottom: 2px;
                 `;
-                bankElement.appendChild(typeName);
+                textContainer.appendChild(typeName);
                 
                 // Ammo count
                 const ammoCountElement = document.createElement('div');
@@ -1976,41 +1965,101 @@ class SpaceshipGame {
                 ammoCountElement.style.cssText = `
                     color: white;
                     font-family: monospace;
-                    font-size: 8px;
-                    z-index: 1;
-                    position: relative;
+                    font-size: 10px;
                 `;
-                bankElement.appendChild(ammoCountElement);
+                textContainer.appendChild(ammoCountElement);
+                
+                // Add text container to bank container
+                bankContainer.appendChild(textContainer);
                 
                 // Add click handler
                 bankElement.addEventListener('click', () => {
-                    this.currentBank = i;
-                    this.updateAmmoDisplay();
+                    if (this.gameState === 'math') {
+                        // In math mode, select bank for math problems
+                        this.selectMathBank(i);
+                    } else {
+                        // In game mode, select bank for shooting
+                        this.currentBank = i;
+                        this.updateAmmoDisplay();
+                    }
                 });
                 
-                slidingContainer.appendChild(bankElement);
+                slidingContainer.appendChild(bankContainer);
             }
         }
         
         // Update all bank elements
         for (let i = 0; i < 10; i++) {
-            const bankElement = slidingContainer.querySelector(`.bank-${i}`);
+            const bankContainer = slidingContainer.querySelector(`.bank-container.bank-${i}`);
+            const bankElement = bankContainer.querySelector('.ammo-bank');
             const fillBar = bankElement.querySelector('.fill-bar');
-            const ammoCountElement = bankElement.querySelector('.ammo-count');
+            const ammoCountElement = bankContainer.querySelector('.ammo-count');
             
             const ammoCount = this.ammunitionBanks[i].length;
             const maxAmmo = this.maxAmmoPerBank;
             const fillPercent = ammoCount / maxAmmo;
             const isSelected = i === this.currentBank;
+            const isMathTarget = this.gameState === 'math' && i === this.mathMode.targetBank;
             
             // Update bank styling
-            bankElement.style.background = isSelected ? '#444' : '#222';
-            bankElement.style.border = isSelected ? '3px solid #00ff00' : '1px solid #666';
+            if (isMathTarget) {
+                // Math mode: highlight target bank with yellow border
+                bankElement.style.background = '#000000';
+                bankElement.style.border = '3px solid #ffff00';
+            } else if (isSelected) {
+                // Game mode: highlight selected bank with green border
+                bankElement.style.background = '#000000';
+                bankElement.style.border = '3px solid #00ff00';
+            } else {
+                // Default styling - black background
+                bankElement.style.background = '#000000';
+                bankElement.style.border = '1px solid #666';
+            }
             
-            // Update fill bar
-            const fillColor = fillPercent > 0.5 ? '#00ff00' : fillPercent > 0.2 ? '#ffff00' : '#ff0000';
-            fillBar.style.height = `${fillPercent * 100}%`;
-            fillBar.style.background = fillColor;
+            // Update fill bar - use ammunition color
+            const ammoColor = this.ammoTypes[i].color;
+            // Bank 0 (Peanuts) is always full, others use actual fill percent
+            const displayFillPercent = i === 0 ? 1.0 : fillPercent;
+            fillBar.style.height = `${displayFillPercent * 100}%`;
+            fillBar.style.background = ammoColor;
+            
+            // Update bank number with colored circle when ammunition is available
+            const bankNumber = bankElement.querySelector('.bank-number');
+            if (ammoCount > 0 || i === 0) { // Bank 0 (Peanuts) always shows circle
+                // Add colored circle background when ammunition is available
+                bankNumber.style.cssText = `
+                    color: black;
+                    font-family: monospace;
+                    font-size: 14px;
+                    font-weight: bold;
+                    z-index: 1;
+                    position: relative;
+                    background: ${ammoColor};
+                    border-radius: 50%;
+                    width: 24px;
+                    height: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+                `;
+            } else {
+                // No circle when no ammunition
+                bankNumber.style.cssText = `
+                    color: black;
+                    font-family: monospace;
+                    font-size: 14px;
+                    font-weight: bold;
+                    z-index: 1;
+                    position: relative;
+                    background: transparent;
+                    border-radius: 0;
+                    width: auto;
+                    height: auto;
+                    display: block;
+                    text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+                `;
+            }
             
             // Update ammo count
             ammoCountElement.textContent = `${ammoCount}/${maxAmmo}`;
@@ -2021,7 +2070,8 @@ class SpaceshipGame {
         const gap = 2;
         const totalBankWidth = bankWidth + gap;
         const containerWidth = 800;
-        const selectedBankOffset = (containerWidth / 2) - (this.currentBank * totalBankWidth + bankWidth / 2);
+        const targetBank = this.gameState === 'math' ? this.mathMode.targetBank : this.currentBank;
+        const selectedBankOffset = (containerWidth / 2) - (targetBank * totalBankWidth + bankWidth / 2);
         slidingContainer.style.transform = `translateX(${selectedBankOffset}px)`;
     }
     

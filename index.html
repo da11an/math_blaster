@@ -42,16 +42,20 @@
         
         #mathMode {
             position: absolute;
-            top: 50%;
+            top: 20px;
             left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.95);
             border: 2px solid #00ff00;
-            padding: 30px;
+            padding: 20px;
             border-radius: 10px;
             text-align: center;
             z-index: 20;
             display: none;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
         }
         
         #mathProblem {
@@ -162,7 +166,7 @@
         <!-- Bottom UI Row -->
         <div style="display: flex; justify-content: center; width: 800px; align-items: center;">
             <!-- Center: Ammo Banks -->
-            <div id="ammoBanksContainer" style="display: flex; gap: 2px; height: 90px; overflow: hidden; position: relative; width: 800px; padding: 5px 0;"></div>
+            <div id="ammoBanksContainer" style="display: flex; gap: 2px; height: 120px; overflow: hidden; position: relative; width: 800px; padding: 5px 0;"></div>
         </div>
         
         <!-- Hidden UI for compatibility -->
@@ -178,8 +182,7 @@
                 <!-- Main math area -->
                 <div style="flex: 1;">
                     <div style="margin: 10px 0; text-align: center;">
-                        <div style="color: #00ff00; font-size: 16px; margin-bottom: 10px;">Select Bank to Fill (Click or use F/D keys):</div>
-                        <div id="mathBankDisplay" style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-bottom: 15px;"></div>
+                        <div style="color: #00ff00; font-size: 16px; margin-bottom: 10px;">Select Bank to Fill (Click ammunition bank below or use F/D keys):</div>
                         <div id="selectedBankInfo" style="color: #ffff00; font-size: 14px; margin-bottom: 10px;"></div>
                         
                         <!-- Math Generator Selection -->
