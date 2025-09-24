@@ -33,16 +33,16 @@ class SpaceshipGame {
         
         // Initialize 10 ammunition banks with increasing power (0-9)
         this.ammoTypes = [
-            { power: 0, color: '#666666', damage: 1, name: 'Pulse', infinite: true, splashRadius: 0 },    // Bank 0 - Infinite
-            { power: 1, color: '#00ff00', damage: 2, name: 'Heavy Pulse', splashRadius: 10 },   // Bank 1
-            { power: 2, color: '#88ff00', damage: 3, name: 'Laser', splashRadius: 20 },   // Bank 2
-            { power: 3, color: '#ffff00', damage: 4, name: 'Heavy Laser', splashRadius: 40 },   // Bank 3
-            { power: 4, color: '#ffaa00', damage: 5, name: 'Blaster', splashRadius: 70 },   // Bank 4
-            { power: 5, color: '#ff8800', damage: 8, name: 'Heavy Blaster', splashRadius: 100 },      // Bank 5
-            { power: 6, color: '#ff4400', damage: 12, name: 'Cannon', splashRadius: 150 },    // Bank 6
-            { power: 7, color: '#ff0000', damage: 18, name: 'Heavy Cannon', splashRadius: 200 }, // Bank 7
-            { power: 8, color: '#ff00ff', damage: 25, name: 'Destroyer', splashRadius: 250 },  // Bank 8
-            { power: 9, color: '#ffffff', damage: 35, name: 'Heavy Destroyer', splashRadius: 300 }     // Bank 9
+            { power: 0, color: '#666666', damage: 1, name: 'Peanuts', infinite: true, splashRadius: 0 },    // Bank 0 - Infinite
+            { power: 1, color: '#00ff00', damage: 2, name: 'Pulse', splashRadius: 0 },   // Bank 1
+            { power: 2, color: '#88ff00', damage: 3, name: 'Beam', splashRadius: 0 },   // Bank 2
+            { power: 3, color: '#ffff00', damage: 4, name: 'Flare', splashRadius: 50 },   // Bank 3
+            { power: 4, color: '#ffaa00', damage: 5, name: 'Laser', splashRadius: 50 },   // Bank 4
+            { power: 5, color: '#ff8800', damage: 8, name: 'Phaser', splashRadius: 100 },      // Bank 5
+            { power: 6, color: '#ff4400', damage: 12, name: 'Quasar', splashRadius: 150 },    // Bank 6
+            { power: 7, color: '#ff0000', damage: 18, name: 'Cannon', splashRadius: 185 }, // Bank 7
+            { power: 8, color: '#ff00ff', damage: 25, name: 'Blaster', splashRadius: 225 },  // Bank 8
+            { power: 9, color: '#ffffff', damage: 35, name: 'Destroyer', splashRadius: 300 }     // Bank 9
         ];
         
         // Initialize ammunition banks (0-9, so 10 banks total)
