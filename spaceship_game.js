@@ -13,7 +13,7 @@ class SpaceshipGame {
         this.apiBaseUrl = 'http://localhost:8001/api';
         this.score = 0;
         this.level = 1;
-        this.lives = 3;
+        this.lives = 5;
         
         // Player spaceship
         this.player = {
@@ -407,7 +407,7 @@ class SpaceshipGame {
         // Reset game counters and stats
         this.score = 0;
         this.level = 1;
-        this.lives = 3;
+        this.lives = 5;
         this.enemiesDestroyed = 0;
         this.enemySpawnTimer = 0;
         
@@ -1338,7 +1338,7 @@ class SpaceshipGame {
                 minLevel: 7
             },
             
-            // Level 9+: Boss-level enemies
+            // Level 9-10: Boss-level enemies
             { 
                 size: 50, 
                 shield: 6, 
@@ -1358,6 +1358,102 @@ class SpaceshipGame {
                 name: 'Titan',
                 behavior: 'complex_pattern',
                 minLevel: 9
+            },
+            
+            // Level 25-30: Elite enemies
+            { 
+                size: 35, 
+                shield: 8, 
+                speed: 1.2, 
+                color: '#ff0066',
+                personality: 'elite',
+                name: 'Phantom',
+                behavior: 'teleport',
+                minLevel: 25
+            },
+            { 
+                size: 45, 
+                shield: 9, 
+                speed: 0.8, 
+                color: '#00ffaa',
+                personality: 'elite',
+                name: 'Specter',
+                behavior: 'wave_pattern',
+                minLevel: 27
+            },
+            { 
+                size: 40, 
+                shield: 10, 
+                speed: 1.0, 
+                color: '#aa00ff',
+                personality: 'elite',
+                name: 'Void',
+                behavior: 'chaotic',
+                minLevel: 30
+            },
+            
+            // Level 50-75: Advanced bosses
+            { 
+                size: 60, 
+                shield: 12, 
+                speed: 0.6, 
+                color: '#ff6600',
+                personality: 'advanced_boss',
+                name: 'Overlord',
+                behavior: 'multi_pattern',
+                minLevel: 50
+            },
+            { 
+                size: 65, 
+                shield: 15, 
+                speed: 0.5, 
+                color: '#6600ff',
+                personality: 'advanced_boss',
+                name: 'Dominator',
+                behavior: 'adaptive',
+                minLevel: 60
+            },
+            { 
+                size: 70, 
+                shield: 18, 
+                speed: 0.4, 
+                color: '#ff0066',
+                personality: 'ultimate_boss',
+                name: 'Annihilator',
+                behavior: 'ultimate_pattern',
+                minLevel: 75
+            },
+            
+            // Level 100+: Nightmare enemies
+            { 
+                size: 30, 
+                shield: 20, 
+                speed: 1.5, 
+                color: '#ff0000',
+                personality: 'nightmare',
+                name: 'Reaper',
+                behavior: 'death_spiral',
+                minLevel: 100
+            },
+            { 
+                size: 80, 
+                shield: 25, 
+                speed: 0.3, 
+                color: '#000000',
+                personality: 'nightmare',
+                name: 'Void Lord',
+                behavior: 'void_pattern',
+                minLevel: 150
+            },
+            { 
+                size: 90, 
+                shield: 30, 
+                speed: 0.2, 
+                color: '#ffffff',
+                personality: 'nightmare',
+                name: 'Apocalypse',
+                behavior: 'apocalypse_pattern',
+                minLevel: 200
             }
         ];
         
@@ -1408,6 +1504,80 @@ class SpaceshipGame {
                 const wave1 = Math.sin(enemy.behaviorTimer * 0.05) * 2;
                 const wave2 = Math.cos(enemy.behaviorTimer * 0.08) * 1.5;
                 enemy.x += (wave1 + wave2) * enemy.speed * 0.2;
+                break;
+                
+            case 'teleport':
+                // Elite enemies: Teleport randomly
+                if (enemy.behaviorTimer % 90 === 0) {
+                    enemy.x = Math.random() * (this.width - enemy.width);
+                }
+                break;
+                
+            case 'wave_pattern':
+                // Elite enemies: Wave movement
+                enemy.x += Math.sin(enemy.behaviorTimer * 0.08) * enemy.speed * 0.6;
+                break;
+                
+            case 'chaotic':
+                // Elite enemies: Chaotic movement
+                enemy.x += (Math.random() - 0.5) * enemy.speed * 0.8;
+                break;
+                
+            case 'multi_pattern':
+                // Advanced boss: Multiple patterns
+                const pattern1 = Math.sin(enemy.behaviorTimer * 0.03) * 3;
+                const pattern2 = Math.cos(enemy.behaviorTimer * 0.07) * 2;
+                const pattern3 = Math.sin(enemy.behaviorTimer * 0.12) * 1.5;
+                enemy.x += (pattern1 + pattern2 + pattern3) * enemy.speed * 0.15;
+                break;
+                
+            case 'adaptive':
+                // Advanced boss: Adapts to player position
+                const playerCenterX = this.player.x + this.player.width / 2;
+                const enemyCenterX = enemy.x + enemy.width / 2;
+                const distance = Math.abs(playerCenterX - enemyCenterX);
+                if (distance > 100) {
+                    const direction = playerCenterX > enemyCenterX ? 1 : -1;
+                    enemy.x += direction * enemy.speed * 0.4;
+                } else {
+                    enemy.x += (Math.random() - 0.5) * enemy.speed * 0.3;
+                }
+                break;
+                
+            case 'ultimate_pattern':
+                // Ultimate boss: Ultimate movement pattern
+                const ultimate1 = Math.sin(enemy.behaviorTimer * 0.02) * 4;
+                const ultimate2 = Math.cos(enemy.behaviorTimer * 0.05) * 3;
+                const ultimate3 = Math.sin(enemy.behaviorTimer * 0.1) * 2;
+                const ultimate4 = Math.cos(enemy.behaviorTimer * 0.15) * 1.5;
+                enemy.x += (ultimate1 + ultimate2 + ultimate3 + ultimate4) * enemy.speed * 0.1;
+                break;
+                
+            case 'death_spiral':
+                // Nightmare enemies: Death spiral
+                enemy.spiralAngle += 0.15;
+                enemy.x += Math.cos(enemy.spiralAngle) * enemy.speed * 0.5;
+                enemy.y += Math.sin(enemy.spiralAngle) * enemy.speed * 0.2;
+                break;
+                
+            case 'void_pattern':
+                // Nightmare enemies: Void pattern (disappears and reappears)
+                if (enemy.behaviorTimer % 120 < 60) {
+                    enemy.x += Math.sin(enemy.behaviorTimer * 0.1) * enemy.speed * 0.3;
+                } else {
+                    // "Void" phase - move erratically
+                    enemy.x += (Math.random() - 0.5) * enemy.speed * 0.6;
+                }
+                break;
+                
+            case 'apocalypse_pattern':
+                // Nightmare enemies: Apocalypse pattern
+                const apoc1 = Math.sin(enemy.behaviorTimer * 0.01) * 5;
+                const apoc2 = Math.cos(enemy.behaviorTimer * 0.03) * 4;
+                const apoc3 = Math.sin(enemy.behaviorTimer * 0.07) * 3;
+                const apoc4 = Math.cos(enemy.behaviorTimer * 0.11) * 2;
+                const apoc5 = Math.sin(enemy.behaviorTimer * 0.17) * 1.5;
+                enemy.x += (apoc1 + apoc2 + apoc3 + apoc4 + apoc5) * enemy.speed * 0.08;
                 break;
         }
         
@@ -1610,7 +1780,7 @@ class SpaceshipGame {
     resetGame() {
         this.score = 0;
         this.level = 1;
-        this.lives = 3;
+        this.lives = 5;
         this.bullets = [];
         this.enemies = [];
         this.enemiesDestroyed = 0;
@@ -1633,7 +1803,20 @@ class SpaceshipGame {
             this.level++;
             this.enemiesDestroyed = 0;
             this.levelEnemyTarget += 2; // Increase difficulty
-            this.enemySpawnRate = Math.max(60, this.enemySpawnRate - 10); // Faster spawning
+            
+            // More gradual spawn rate progression - easier early, challenging later
+            if (this.level <= 10) {
+                this.enemySpawnRate = Math.max(100, this.enemySpawnRate - 5); // Early levels: very gradual increase
+            } else if (this.level <= 25) {
+                this.enemySpawnRate = Math.max(80, this.enemySpawnRate - 8); // Low-mid levels: moderate increase
+            } else if (this.level <= 50) {
+                this.enemySpawnRate = Math.max(60, this.enemySpawnRate - 12); // Mid levels: faster increase
+            } else if (this.level <= 100) {
+                this.enemySpawnRate = Math.max(40, this.enemySpawnRate - 15); // High levels: aggressive increase
+            } else {
+                this.enemySpawnRate = Math.max(20, this.enemySpawnRate - 20); // Elite levels: extreme increase
+            }
+            
             this.updateUI();
             this.showLevelUp();
         }
@@ -1925,11 +2108,28 @@ class SpaceshipGame {
     }
     
     drawLifeBar() {
-        // Update HTML life bar instead of drawing on canvas
-        const lifeBar = document.getElementById('lifeBar');
-        if (lifeBar) {
-            const lifePercent = (this.lives / 5) * 100;
-            lifeBar.style.width = `${lifePercent}%`;
+        // Update HTML life hearts instead of drawing on canvas
+        const lifeHearts = document.getElementById('lifeHearts');
+        if (lifeHearts) {
+            // Clear existing hearts
+            lifeHearts.innerHTML = '';
+            
+            // Create hearts for each life
+            for (let i = 0; i < 5; i++) {
+                const heart = document.createElement('span');
+                if (i < this.lives) {
+                    // Full heart for remaining lives
+                    heart.textContent = '❤️';
+                    heart.style.color = '#ff4444';
+                } else {
+                    // Empty heart for lost lives
+                    heart.textContent = '🤍';
+                    heart.style.color = '#666666';
+                }
+                heart.style.fontSize = '20px';
+                heart.style.transition = 'color 0.3s ease';
+                lifeHearts.appendChild(heart);
+            }
         }
     }
     
@@ -2091,9 +2291,9 @@ class SpaceshipGame {
                 bankElement.style.background = '#000000';
                 bankElement.style.border = '3px solid #ffff00';
             } else if (isSelected) {
-                // Game mode: highlight selected bank with green border
+                // Game mode: highlight selected bank with purple border
                 bankElement.style.background = '#000000';
-                bankElement.style.border = '3px solid #00ff00';
+                bankElement.style.border = '4px solid #aa00ff';
             } else {
                 // Default styling - black background
                 bankElement.style.background = '#000000';
@@ -2275,6 +2475,85 @@ class SpaceshipGame {
                 this.ctx.lineTo(enemy.x + enemy.width * 0.2, centerY);
                 this.ctx.lineTo(enemy.x, enemy.y + enemy.height * 0.4);
                 this.ctx.lineTo(enemy.x + enemy.width * 0.3, enemy.y + enemy.height * 0.2);
+                this.ctx.closePath();
+                break;
+                
+            case 'elite':
+                // Sleek, futuristic design with energy cores
+                this.ctx.moveTo(centerX, enemy.y);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.9, enemy.y + enemy.height * 0.1);
+                this.ctx.lineTo(enemy.x + enemy.width, enemy.y + enemy.height * 0.3);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.9, enemy.y + enemy.height * 0.5);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.7, enemy.y + enemy.height * 0.7);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.5, enemy.y + enemy.height * 0.9);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.3, enemy.y + enemy.height * 0.9);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.1, enemy.y + enemy.height * 0.7);
+                this.ctx.lineTo(enemy.x, enemy.y + enemy.height * 0.5);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.1, enemy.y + enemy.height * 0.3);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.1, enemy.y + enemy.height * 0.1);
+                this.ctx.closePath();
+                break;
+                
+            case 'advanced_boss':
+                // Massive, intimidating design with multiple weapon mounts
+                this.ctx.moveTo(centerX, enemy.y);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.8, enemy.y + enemy.height * 0.1);
+                this.ctx.lineTo(enemy.x + enemy.width, enemy.y + enemy.height * 0.2);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.9, enemy.y + enemy.height * 0.4);
+                this.ctx.lineTo(enemy.x + enemy.width, enemy.y + enemy.height * 0.6);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.9, enemy.y + enemy.height * 0.8);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.8, enemy.y + enemy.height * 0.9);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.6, enemy.y + enemy.height);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.4, enemy.y + enemy.height);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.2, enemy.y + enemy.height * 0.9);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.1, enemy.y + enemy.height * 0.8);
+                this.ctx.lineTo(enemy.x, enemy.y + enemy.height * 0.6);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.1, enemy.y + enemy.height * 0.4);
+                this.ctx.lineTo(enemy.x, enemy.y + enemy.height * 0.2);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.2, enemy.y + enemy.height * 0.1);
+                this.ctx.closePath();
+                break;
+                
+            case 'ultimate_boss':
+                // Apocalyptic design with energy tendrils
+                this.ctx.moveTo(centerX, enemy.y);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.9, enemy.y + enemy.height * 0.05);
+                this.ctx.lineTo(enemy.x + enemy.width, enemy.y + enemy.height * 0.15);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.95, enemy.y + enemy.height * 0.3);
+                this.ctx.lineTo(enemy.x + enemy.width, enemy.y + enemy.height * 0.45);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.95, enemy.y + enemy.height * 0.6);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.9, enemy.y + enemy.height * 0.75);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.8, enemy.y + enemy.height * 0.9);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.6, enemy.y + enemy.height);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.4, enemy.y + enemy.height);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.2, enemy.y + enemy.height * 0.9);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.1, enemy.y + enemy.height * 0.75);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.05, enemy.y + enemy.height * 0.6);
+                this.ctx.lineTo(enemy.x, enemy.y + enemy.height * 0.45);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.05, enemy.y + enemy.height * 0.3);
+                this.ctx.lineTo(enemy.x, enemy.y + enemy.height * 0.15);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.1, enemy.y + enemy.height * 0.05);
+                this.ctx.closePath();
+                break;
+                
+            case 'nightmare':
+                // Chaotic, otherworldly design
+                this.ctx.moveTo(centerX, enemy.y);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.8, enemy.y + enemy.height * 0.1);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.95, enemy.y + enemy.height * 0.2);
+                this.ctx.lineTo(enemy.x + enemy.width, enemy.y + enemy.height * 0.35);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.9, enemy.y + enemy.height * 0.5);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.95, enemy.y + enemy.height * 0.65);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.85, enemy.y + enemy.height * 0.8);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.7, enemy.y + enemy.height * 0.9);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.5, enemy.y + enemy.height * 0.95);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.3, enemy.y + enemy.height * 0.9);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.15, enemy.y + enemy.height * 0.8);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.05, enemy.y + enemy.height * 0.65);
+                this.ctx.lineTo(enemy.x, enemy.y + enemy.height * 0.5);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.05, enemy.y + enemy.height * 0.35);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.1, enemy.y + enemy.height * 0.2);
+                this.ctx.lineTo(enemy.x + enemy.width * 0.2, enemy.y + enemy.height * 0.1);
                 this.ctx.closePath();
                 break;
                 
