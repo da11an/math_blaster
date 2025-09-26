@@ -51,7 +51,11 @@ class MathGeneratorFactory:
             else:
                 raise ValueError(f"Generator {generator_type} is disabled")
         
-        return self.GENERATORS[generator_type](seed=seed, grade_band=grade_level)
+        # Pass grade_band parameter for generators that support it
+        if generator_type == 'fact_ladder':
+            return self.GENERATORS[generator_type](seed=seed, grade_band=grade_level)
+        else:
+            return self.GENERATORS[generator_type](seed=seed)
     
     def get_available_generators(self) -> list:
         """Get list of available generator types"""

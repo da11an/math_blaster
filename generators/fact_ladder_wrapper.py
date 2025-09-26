@@ -11,8 +11,8 @@ from .math_fact_ladder import FactLadderGenerator
 class FactLadderWrapper(MathGeneratorInterface):
     """Wrapper for FactLadderGenerator to implement the common interface"""
     
-    def __init__(self, seed: Optional[int] = None):
-        self.generator = FactLadderGenerator(seed=seed)
+    def __init__(self, seed: Optional[int] = None, grade_band: str = "G3"):
+        self.generator = FactLadderGenerator(seed=seed, grade_band=grade_band)
     
     def generate_problem(self, level: int) -> MathProblem:
         """Generate a single math problem for the given level"""

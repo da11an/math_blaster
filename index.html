@@ -160,7 +160,7 @@
                 <div>Space: Shoot | M: Math Mode</div>
                 <div>0-9: Select Bank | D: Downgrade</div>
                 <div>F: Find Upgrade | S: Blast Mode</div>
-                <div>ESC: Logout</div>
+                <div>P: Progress Review | ESC: Logout</div>
             </div>
         </div>
         
@@ -193,7 +193,7 @@
                         <div style="margin: 15px 0; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; border: 1px solid #333;">
                             <div style="color: #00ff00; font-size: 14px; margin-bottom: 8px;">Math Problem Generator:</div>
                             <select id="mathGeneratorSelect" style="background: #222; color: #fff; border: 1px solid #555; padding: 5px 10px; border-radius: 3px; font-size: 14px;">
-                                <option value="fact_ladder">Fact Ladder (Progressive)</option>
+                                <option value="fact_ladder" selected>Fact Ladder (Progressive)</option>
                                 <option value="mental">Mental Math (Advanced)</option>
                                 <!-- <option value="simple">Simple Math (Basic)</option> -->
                             </select>
@@ -297,6 +297,7 @@
                 <div>• Use arrow keys or J/L to move your spaceship</div>
                 <div>• Press SPACEBAR to shoot at enemy ships</div>
                 <div>• Press M to enter math mode and earn ammunition</div>
+                <div>• Press P to view your progress and statistics</div>
                 <div>• Press 0-9 to select different ammunition banks</div>
                 <div>• Press D to downgrade, F to find upgrade ammunition</div>
                 <div>• Press ESC to logout and switch users</div>
@@ -401,8 +402,8 @@
                     // Generate plot data
                     const plotData = [];
                     const ammoColors = [
-                        '#666666', '#00ff00', '#88ff00', '#ffff00', '#ffaa00',
-                        '#ff8800', '#ff4400', '#ff0000', '#ff00ff', '#ffffff'
+                        '#00ff00', '#88ff00', '#ffff00', '#ffaa00', '#ff8800',
+                        '#ff4400', '#ff0000', '#ff00ff', '#ffffff'
                     ];
                     
                     for (const [level, metrics] of Object.entries(rating.metrics.levels)) {

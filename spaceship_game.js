@@ -424,6 +424,13 @@ class SpaceshipGame {
         this.mathMode.problemLog = [];
         this.mathMode.problemStartTime = null;
         
+        // Close progress review modal if open
+        const progressModal = document.getElementById('progressModal');
+        if (progressModal && progressModal.style.display === 'block') {
+            progressModal.style.display = 'none';
+            console.log('Progress review modal closed during logout');
+        }
+        
         // Reset player position
         this.player.x = this.width / 2 - this.player.width / 2;
         this.player.y = this.height - this.player.height - 10;
@@ -517,6 +524,9 @@ class SpaceshipGame {
             } else if (e.code === 'KeyS' && this.gameState === 'playing') {
                 e.preventDefault();
                 this.toggleBlastMode();
+            } else if (e.code === 'KeyP' && this.gameState !== 'login') {
+                e.preventDefault();
+                this.toggleProgressReview();
             } else if (e.code === 'Enter' && this.gameState === 'login') {
                 e.preventDefault();
                 // Try login first, if that fails, try register
@@ -665,6 +675,24 @@ class SpaceshipGame {
     toggleBlastMode() {
         this.blastMode = this.blastMode === 'single' ? 'triple' : 'single';
         this.showBlastModeMessage();
+    }
+    
+    toggleProgressReview() {
+        const modal = document.getElementById('progressModal');
+        if (modal.style.display === 'block') {
+            this.closeProgressModal();
+        } else {
+            // Call the global reviewProgress function
+            if (typeof reviewProgress === 'function') {
+                reviewProgress();
+            } else {
+                console.error('reviewProgress function not found');
+            }
+        }
+    }
+    
+    closeProgressModal() {
+        document.getElementById('progressModal').style.display = 'none';
     }
     
     showBlastModeMessage() {
