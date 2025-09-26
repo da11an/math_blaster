@@ -378,17 +378,36 @@
                     html += `<p>Total Problems: ${rating.metrics.overall.items || 0}</p>`;
                 }
                 
-                // Level-specific metrics
+                // Level-specific metrics - Scatter Plot
                 if (rating.metrics.levels) {
                     html += '<h4 style="color: #00ff00;">Performance by Level</h4>';
+                    html += '<div id="performancePlot" style="width: 100%; height: 300px; margin: 20px 0; background: rgba(0,0,0,0.3); border: 1px solid #333; border-radius: 5px; position: relative;"></div>';
+                    
+                    // Generate plot data
+                    const plotData = [];
+                    const ammoColors = [
+                        '#666666', '#00ff00', '#88ff00', '#ffff00', '#ffaa00',
+                        '#ff8800', '#ff4400', '#ff0000', '#ff00ff', '#ffffff'
+                    ];
+                    
                     for (const [level, metrics] of Object.entries(rating.metrics.levels)) {
-                        html += `<div style="margin: 10px 0; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 3px;">`;
-                        html += `<strong>Level ${level}:</strong> `;
-                        html += `Accuracy: ${(metrics.accuracy * 100).toFixed(1)}%, `;
-                        html += `Speed: ${metrics.median_time_all?.toFixed(2) || 'N/A'}s, `;
-                        html += `Count: ${metrics.attempted || 0}`;
-                        html += '</div>';
+                        if (metrics.attempted > 0 && metrics.median_time_all) {
+                            const accuracy = metrics.accuracy * 100;
+                            const speed = 60 / metrics.median_time_all; // problems per minute
+                            const color = ammoColors[parseInt(level) - 1] || '#ffffff';
+                            
+                            plotData.push({
+                                level: parseInt(level),
+                                accuracy: accuracy,
+                                speed: speed,
+                                count: metrics.attempted,
+                                color: color
+                            });
+                        }
                     }
+                    
+                    // Store plot data for later use
+                    window.plotData = plotData;
                 }
                 
                 html += '</div>';
@@ -429,10 +448,253 @@
             }
             
             content.innerHTML = html;
+            
+            // Create the plot if we have data
+            if (window.plotData && window.plotData.length > 0) {
+                setTimeout(() => {
+                    createPerformancePlot(window.plotData);
+                }, 100);
+            }
         }
         
         function closeProgressModal() {
             document.getElementById('progressModal').style.display = 'none';
+        }
+        
+        function createPerformancePlot(data) {
+            const plotContainer = document.getElementById('performancePlot');
+            if (!plotContainer || data.length === 0) return;
+            
+            // Clear any existing content
+            plotContainer.innerHTML = '';
+            
+            // Set up dimensions
+            const width = plotContainer.offsetWidth - 40; // Account for padding
+            const height = 280; // Account for padding
+            const margin = { top: 20, right: 40, bottom: 40, left: 60 };
+            const plotWidth = width - margin.left - margin.right;
+            const plotHeight = height - margin.top - margin.bottom;
+            
+            // Find data ranges
+            const accuracies = data.map(d => d.accuracy);
+            const speeds = data.map(d => d.speed);
+            const minAccuracy = Math.min(...accuracies);
+            const maxAccuracy = Math.max(...accuracies);
+            const minSpeed = Math.min(...speeds);
+            const maxSpeed = Math.max(...speeds);
+            
+            // Add some padding to ranges
+            const accuracyRange = maxAccuracy - minAccuracy;
+            const speedRange = maxSpeed - minSpeed;
+            const accuracyMin = Math.max(0, minAccuracy - accuracyRange * 0.1);
+            const accuracyMax = Math.min(100, maxAccuracy + accuracyRange * 0.1);
+            const speedMin = Math.max(0, minSpeed - speedRange * 0.1);
+            const speedMax = maxSpeed + speedRange * 0.1;
+            
+            // Create SVG
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', width);
+            svg.setAttribute('height', height);
+            svg.style.background = 'rgba(0,0,0,0.2)';
+            
+            // Create plot area
+            const plotArea = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            plotArea.setAttribute('transform', `translate(${margin.left}, ${margin.top})`);
+            
+            // Add grid lines
+            const gridGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            gridGroup.setAttribute('class', 'grid');
+            
+            // Vertical grid lines (accuracy)
+            for (let i = 0; i <= 10; i++) {
+                const x = (i / 10) * plotWidth;
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x);
+                line.setAttribute('y1', 0);
+                line.setAttribute('x2', x);
+                line.setAttribute('y2', plotHeight);
+                line.setAttribute('stroke', '#333');
+                line.setAttribute('stroke-width', '1');
+                line.setAttribute('opacity', '0.3');
+                gridGroup.appendChild(line);
+            }
+            
+            // Horizontal grid lines (speed)
+            for (let i = 0; i <= 8; i++) {
+                const y = (i / 8) * plotHeight;
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', 0);
+                line.setAttribute('y1', y);
+                line.setAttribute('x2', plotWidth);
+                line.setAttribute('y2', y);
+                line.setAttribute('stroke', '#333');
+                line.setAttribute('stroke-width', '1');
+                line.setAttribute('opacity', '0.3');
+                gridGroup.appendChild(line);
+            }
+            
+            plotArea.appendChild(gridGroup);
+            
+            // Add axes
+            const axesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            axesGroup.setAttribute('class', 'axes');
+            
+            // X-axis (accuracy)
+            const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            xAxis.setAttribute('x1', 0);
+            xAxis.setAttribute('y1', plotHeight);
+            xAxis.setAttribute('x2', plotWidth);
+            xAxis.setAttribute('y2', plotHeight);
+            xAxis.setAttribute('stroke', '#fff');
+            xAxis.setAttribute('stroke-width', '2');
+            axesGroup.appendChild(xAxis);
+            
+            // Y-axis (speed)
+            const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            yAxis.setAttribute('x1', 0);
+            yAxis.setAttribute('y1', 0);
+            yAxis.setAttribute('x2', 0);
+            yAxis.setAttribute('y2', plotHeight);
+            yAxis.setAttribute('stroke', '#fff');
+            yAxis.setAttribute('stroke-width', '2');
+            axesGroup.appendChild(yAxis);
+            
+            // Add axis labels
+            const xLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            xLabel.setAttribute('x', plotWidth / 2);
+            xLabel.setAttribute('y', plotHeight + 30);
+            xLabel.setAttribute('text-anchor', 'middle');
+            xLabel.setAttribute('fill', '#fff');
+            xLabel.setAttribute('font-size', '12');
+            xLabel.textContent = 'Accuracy (%)';
+            axesGroup.appendChild(xLabel);
+            
+            const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            yLabel.setAttribute('x', -30);
+            yLabel.setAttribute('y', plotHeight / 2);
+            yLabel.setAttribute('text-anchor', 'middle');
+            yLabel.setAttribute('fill', '#fff');
+            yLabel.setAttribute('font-size', '12');
+            yLabel.setAttribute('transform', 'rotate(-90, -30, ' + (plotHeight / 2) + ')');
+            yLabel.textContent = 'Speed (problems/min)';
+            axesGroup.appendChild(yLabel);
+            
+            // Add tick marks and labels
+            for (let i = 0; i <= 10; i++) {
+                const x = (i / 10) * plotWidth;
+                const value = accuracyMin + (i / 10) * (accuracyMax - accuracyMin);
+                
+                const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                tick.setAttribute('x1', x);
+                tick.setAttribute('y1', plotHeight);
+                tick.setAttribute('x2', x);
+                tick.setAttribute('y2', plotHeight + 5);
+                tick.setAttribute('stroke', '#fff');
+                tick.setAttribute('stroke-width', '1');
+                axesGroup.appendChild(tick);
+                
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', x);
+                label.setAttribute('y', plotHeight + 18);
+                label.setAttribute('text-anchor', 'middle');
+                label.setAttribute('fill', '#fff');
+                label.setAttribute('font-size', '10');
+                label.textContent = Math.round(value) + '%';
+                axesGroup.appendChild(label);
+            }
+            
+            for (let i = 0; i <= 8; i++) {
+                const y = (i / 8) * plotHeight;
+                const value = speedMax - (i / 8) * (speedMax - speedMin);
+                
+                const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                tick.setAttribute('x1', -5);
+                tick.setAttribute('y1', y);
+                tick.setAttribute('x2', 0);
+                tick.setAttribute('y2', y);
+                tick.setAttribute('stroke', '#fff');
+                tick.setAttribute('stroke-width', '1');
+                axesGroup.appendChild(tick);
+                
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', -10);
+                label.setAttribute('y', y + 3);
+                label.setAttribute('text-anchor', 'end');
+                label.setAttribute('fill', '#fff');
+                label.setAttribute('font-size', '10');
+                label.textContent = Math.round(value * 10) / 10;
+                axesGroup.appendChild(label);
+            }
+            
+            plotArea.appendChild(axesGroup);
+            
+            // Add data points
+            const dataGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            dataGroup.setAttribute('class', 'data-points');
+            
+            data.forEach(point => {
+                const x = ((point.accuracy - accuracyMin) / (accuracyMax - accuracyMin)) * plotWidth;
+                const y = plotHeight - ((point.speed - speedMin) / (speedMax - speedMin)) * plotHeight;
+                
+                // Create circle
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', x);
+                circle.setAttribute('cy', y);
+                circle.setAttribute('r', Math.max(8, Math.min(20, 8 + point.count / 10))); // Size based on count
+                circle.setAttribute('fill', point.color);
+                circle.setAttribute('opacity', '0.7');
+                circle.setAttribute('stroke', '#fff');
+                circle.setAttribute('stroke-width', '2');
+                
+                // Add hover effect
+                circle.addEventListener('mouseenter', function() {
+                    this.setAttribute('opacity', '1');
+                    this.setAttribute('r', Math.max(10, Math.min(22, 10 + point.count / 10)));
+                });
+                circle.addEventListener('mouseleave', function() {
+                    this.setAttribute('opacity', '0.7');
+                    this.setAttribute('r', Math.max(8, Math.min(20, 8 + point.count / 10)));
+                });
+                
+                dataGroup.appendChild(circle);
+                
+                // Add level label
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', x);
+                label.setAttribute('y', y - 15);
+                label.setAttribute('text-anchor', 'middle');
+                label.setAttribute('fill', '#fff');
+                label.setAttribute('font-size', '12');
+                label.setAttribute('font-weight', 'bold');
+                label.textContent = point.level;
+                dataGroup.appendChild(label);
+            });
+            
+            plotArea.appendChild(dataGroup);
+            svg.appendChild(plotArea);
+            plotContainer.appendChild(svg);
+            
+            // Add legend
+            const legend = document.createElement('div');
+            legend.style.cssText = 'margin-top: 10px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;';
+            
+            data.forEach(point => {
+                const legendItem = document.createElement('div');
+                legendItem.style.cssText = 'display: flex; align-items: center; gap: 5px; font-size: 12px;';
+                
+                const colorDot = document.createElement('div');
+                colorDot.style.cssText = `width: 12px; height: 12px; background: ${point.color}; border-radius: 50%; border: 1px solid #fff;`;
+                
+                const label = document.createElement('span');
+                label.textContent = `Level ${point.level} (${point.count} problems)`;
+                label.style.color = '#fff';
+                
+                legendItem.appendChild(colorDot);
+                legendItem.appendChild(label);
+                legend.appendChild(legendItem);
+            });
+            
+            plotContainer.appendChild(legend);
         }
         
         // Close modal when clicking outside
