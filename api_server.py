@@ -10,6 +10,7 @@ from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 from user_data import user_manager
+from math_problem_logger import math_logger
 
 def log_with_timestamp(message):
     """Log a message with timestamp"""
@@ -67,6 +68,12 @@ class APIHandler(BaseHTTPRequestHandler):
             self.handle_save_settings(data)
         elif path == '/api/generate_math_problem':
             self.handle_generate_math_problem(data)
+        elif path == '/api/log_answer':
+            self.handle_log_answer(data)
+        elif path == '/api/log_skip':
+            self.handle_log_skip(data)
+        elif path == '/api/math_stats':
+            self.handle_math_stats(data)
         else:
             self.send_error(404, "Not Found")
     
@@ -190,9 +197,11 @@ class APIHandler(BaseHTTPRequestHandler):
             
             level = data.get('level', 1)
             generator_type = data.get('generator_type', None)  # Let factory decide default
+            username = data.get('username', 'guest')
+            bank_number = data.get('bank_number', None)
             
             # Log the request details
-            log_with_timestamp(f"🧮 Math Problem Request: Level={level}, Generator={generator_type}")
+            log_with_timestamp(f"🧮 Math Problem Request: Level={level}, Generator={generator_type}, User={username}")
             
             # Validate level
             if not isinstance(level, int) or level < 1:
@@ -227,6 +236,17 @@ class APIHandler(BaseHTTPRequestHandler):
             # Log the generated problem
             log_with_timestamp(f"✅ Generated: '{problem.question}' = {problem.answer} (Type: {problem.problem_type})")
             
+            # Log to math problem logger
+            problem_id = math_logger.log_problem_generated(
+                username=username,
+                problem_statement=problem.question,
+                generator_type=generator_name,
+                level=level,
+                level_name=generator.get_level_name(level),
+                correct_answer=problem.answer,
+                bank_number=bank_number
+            )
+            
             self.send_json_response(200, {
                 'success': True,
                 'problem': {
@@ -235,7 +255,8 @@ class APIHandler(BaseHTTPRequestHandler):
                     'level': problem.level,
                     'type': problem.problem_type,
                     'level_name': generator.get_level_name(level),
-                    'description': generator.describe_level(level)
+                    'description': generator.describe_level(level),
+                    'problem_id': problem_id
                 }
             })
             
@@ -263,20 +284,33 @@ class APIHandler(BaseHTTPRequestHandler):
             
             factory = MathGeneratorFactory()
             available_generators = factory.get_available_generators()
+            default_generator = factory.get_default_generator()
             
             log_with_timestamp(f"📋 Available generators: {available_generators}")
+            log_with_timestamp(f"🎯 Default generator: {default_generator}")
+            
+            # Reorder generators to put the default first
+            ordered_generators = []
+            if default_generator in available_generators:
+                ordered_generators.append(default_generator)
+                # Add the rest
+                for gen_type in available_generators:
+                    if gen_type != default_generator:
+                        ordered_generators.append(gen_type)
+            else:
+                ordered_generators = available_generators
+            
+            log_with_timestamp(f"📋 Ordered generators (default first): {ordered_generators}")
             
             # Get descriptions for each generator
             generators_info = []
-            for gen_type in available_generators:
+            for gen_type in ordered_generators:
                 try:
                     generator = factory.create_generator(gen_type)
                     max_level = generator.get_max_level()
                     
                     if gen_type == 'mental':
                         description = "Progressive difficulty with specialized problem types (Levels 1-10)"
-                    elif gen_type == 'simple':
-                        description = "Basic arithmetic operations (Levels 1-4)"
                     elif gen_type == 'fact_ladder':
                         description = "Structured progression through math facts (Levels 1-9)"
                     else:
@@ -302,11 +336,12 @@ class APIHandler(BaseHTTPRequestHandler):
                     # Skip generators that can't be instantiated
                     continue
             
-            log_with_timestamp(f"🎯 Returning {len(generators_info)} generators to client")
+            log_with_timestamp(f"🎯 Returning {len(generators_info)} generators to client (default: {default_generator})")
             
             self.send_json_response(200, {
                 'success': True,
-                'generators': generators_info
+                'generators': generators_info,
+                'default_generator': default_generator
             })
             
         except Exception as e:
@@ -327,6 +362,92 @@ class APIHandler(BaseHTTPRequestHandler):
         
         response = json.dumps(data, indent=2)
         self.wfile.write(response.encode('utf-8'))
+    
+    def handle_log_answer(self, data):
+        """Handle logging math problem answers"""
+        try:
+            problem_id = data.get('problem_id')
+            user_answer = data.get('user_answer')
+            time_elapsed = data.get('time_elapsed')
+            
+            if not problem_id or user_answer is None or time_elapsed is None:
+                self.send_json_response(400, {
+                    'success': False,
+                    'message': 'Missing required fields: problem_id, user_answer, time_elapsed'
+                })
+                return
+            
+            # Log the answer
+            success = math_logger.log_problem_answered(problem_id, user_answer, time_elapsed)
+            
+            if success:
+                log_with_timestamp(f"📝 Logged answer: Problem {problem_id}, Answer: {user_answer}, Time: {time_elapsed:.2f}s")
+                self.send_json_response(200, {'success': True})
+            else:
+                log_with_timestamp(f"❌ Failed to log answer: Problem {problem_id} not found")
+                self.send_json_response(404, {
+                    'success': False,
+                    'message': 'Problem not found'
+                })
+                
+        except Exception as e:
+            log_with_timestamp(f"💥 Error logging answer: {str(e)}")
+            self.send_json_response(500, {
+                'success': False,
+                'message': 'Internal server error'
+            })
+    
+    def handle_log_skip(self, data):
+        """Handle logging skipped math problems"""
+        try:
+            problem_id = data.get('problem_id')
+            reason = data.get('reason', 'user_skipped')
+            
+            if not problem_id:
+                self.send_json_response(400, {
+                    'success': False,
+                    'message': 'Missing required field: problem_id'
+                })
+                return
+            
+            # Log the skip
+            success = math_logger.log_problem_skipped(problem_id, reason)
+            
+            if success:
+                log_with_timestamp(f"⏭️ Logged skip: Problem {problem_id}, Reason: {reason}")
+                self.send_json_response(200, {'success': True})
+            else:
+                log_with_timestamp(f"❌ Failed to log skip: Problem {problem_id} not found")
+                self.send_json_response(404, {
+                    'success': False,
+                    'message': 'Problem not found'
+                })
+                
+        except Exception as e:
+            log_with_timestamp(f"💥 Error logging skip: {str(e)}")
+            self.send_json_response(500, {
+                'success': False,
+                'message': 'Internal server error'
+            })
+    
+    def handle_math_stats(self, data):
+        """Handle getting math problem statistics"""
+        try:
+            username = data.get('username', None)
+            stats = math_logger.get_stats(username)
+            
+            log_with_timestamp(f"📊 Retrieved math stats for user: {username or 'all'}")
+            self.send_json_response(200, {
+                'success': True,
+                'stats': stats
+            })
+            
+        except Exception as e:
+            log_with_timestamp(f"💥 Error getting math stats: {str(e)}")
+            self.send_json_response(500, {
+                'success': False,
+                'message': 'Internal server error'
+            })
 
 def main():
     """Start the API server"""
@@ -343,6 +464,9 @@ def main():
     print("  POST /api/save_ammunition - Save ammunition banks")
     print("  POST /api/save_stats - Save game statistics")
     print("  POST /api/generate_math_problem - Generate math problem")
+    print("  POST /api/log_answer - Log math problem answer")
+    print("  POST /api/log_skip - Log skipped math problem")
+    print("  POST /api/math_stats - Get math problem statistics")
     print("  GET /api/user/{username} - Get user data")
     print("  GET /api/users - List all users")
     print("  GET /api/generators - Get available math generators")

@@ -127,7 +127,8 @@ class SpaceshipGame {
             currentLevel: 1,
             levelName: 'Easy',
             problemLog: [], // Store recent problems for logging
-            problemStartTime: null // Track when problem was generated
+            problemStartTime: null, // Track when problem was generated
+            currentProblemId: null // Track current problem ID for logging
         };
         
         // Available math generators
@@ -506,15 +507,15 @@ class SpaceshipGame {
             } else if (e.code === 'KeyF' && this.gameState === 'playing') {
                 e.preventDefault();
                 this.findUpgrade();
-            } else if (e.code === 'KeyS' && this.gameState === 'playing') {
-                e.preventDefault();
-                this.toggleBlastMode();
-            } else if (e.code === 'KeyF' && this.gameState === 'math') {
-                e.preventDefault();
-                this.mathSelectNextBank();
             } else if (e.code === 'KeyD' && this.gameState === 'math') {
                 e.preventDefault();
                 this.mathSelectPrevBank();
+            } else if (e.code === 'KeyF' && this.gameState === 'math') {
+                e.preventDefault();
+                this.mathSelectNextBank();
+            } else if (e.code === 'KeyS' && this.gameState === 'playing') {
+                e.preventDefault();
+                this.toggleBlastMode();
             } else if (e.code === 'Enter' && this.gameState === 'login') {
                 e.preventDefault();
                 // Try login first, if that fails, try register
@@ -617,7 +618,9 @@ class SpaceshipGame {
         if (this.gameState === 'playing') {
             this.gameState = 'math';
             this.mathMode.active = true;
-            this.mathMode.targetBank = 1; // Default to bank 1
+            // Shift from bank 0 to bank 1 if on infinite zap ammo
+            this.mathMode.targetBank = this.currentBank === 0 ? 1 : this.currentBank;
+            this.currentBank = this.mathMode.targetBank; // Keep them in sync
             this.updateMathBankDisplay();
             this.updateMathLog(); // Initialize the log display
             await this.loadMathGenerators(); // Load available generators
@@ -629,9 +632,31 @@ class SpaceshipGame {
         }
     }
     
-    exitMathMode() {
+    async exitMathMode() {
+        // Log skip of current problem if exiting math mode
+        if (this.mathMode.currentProblemId) {
+            try {
+                await fetch(`${this.apiBaseUrl}/log_skip`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        problem_id: this.mathMode.currentProblemId,
+                        reason: 'exit_math_mode'
+                    })
+                });
+                console.log('⏭️ Logged problem skip due to exiting math mode:', this.mathMode.currentProblemId);
+            } catch (error) {
+                console.error('❌ Failed to log skip to server:', error);
+            }
+        }
+        
         this.gameState = 'playing';
         this.mathMode.active = false;
+        this.currentBank = this.mathMode.targetBank; // Sync bank selection back to game play
+        this.mathMode.currentProblemId = null; // Clear problem ID
+        this.updateAmmoDisplay(); // Update game play display
         document.getElementById('mathMode').style.display = 'none';
         document.getElementById('mathAnswer').value = '';
     }
@@ -689,11 +714,14 @@ class SpaceshipGame {
                 this.availableGenerators = data.generators;
                 
                 if (data.generators.length > 0) {
-                    const defaultGen = data.generators[0];
+                    // Use the default generator from the API response, or fall back to first one
+                    const defaultGeneratorType = data.default_generator || data.generators[0].type;
+                    const defaultGen = data.generators.find(gen => gen.type === defaultGeneratorType) || data.generators[0];
+                    
                     select.value = defaultGen.type;
                     description.textContent = defaultGen.description;
                     this.selectedGenerator = defaultGen.type;
-                    console.log('🎯 Initial generator set to:', this.selectedGenerator);
+                    console.log('🎯 Initial generator set to:', this.selectedGenerator, '(from config default)');
                 }
                 
                 // Remove existing event listeners and add new one
@@ -701,10 +729,30 @@ class SpaceshipGame {
                 select.parentNode.replaceChild(newSelect, select);
                 
                 // Add change event listener to update description and regenerate problem
-                newSelect.addEventListener('change', (e) => {
+                newSelect.addEventListener('change', async (e) => {
                     const selectedGen = data.generators.find(g => g.type === e.target.value);
                     if (selectedGen) {
                         console.log('🔄 Generator changed to:', selectedGen.type);
+                        
+                        // Log skip of current problem if changing generators
+                        if (this.mathMode.currentProblemId) {
+                            try {
+                                await fetch(`${this.apiBaseUrl}/log_skip`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                        problem_id: this.mathMode.currentProblemId,
+                                        reason: 'generator_change'
+                                    })
+                                });
+                                console.log('⏭️ Logged problem skip due to generator change:', this.mathMode.currentProblemId);
+                            } catch (error) {
+                                console.error('❌ Failed to log skip to server:', error);
+                            }
+                        }
+                        
                         description.textContent = selectedGen.description;
                         this.selectedGenerator = selectedGen.type;
                         console.log('Updated selectedGenerator to:', this.selectedGenerator);
@@ -732,8 +780,28 @@ class SpaceshipGame {
         this.updateSelectedBankInfo();
     }
     
-    selectMathBank(bankNumber) {
+    async selectMathBank(bankNumber) {
+        // Log skip of current problem if switching banks
+        if (this.mathMode.currentProblemId && this.mathMode.targetBank !== bankNumber) {
+            try {
+                await fetch(`${this.apiBaseUrl}/log_skip`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        problem_id: this.mathMode.currentProblemId,
+                        reason: 'bank_switch'
+                    })
+                });
+                console.log('⏭️ Logged problem skip due to bank switch:', this.mathMode.currentProblemId);
+            } catch (error) {
+                console.error('❌ Failed to log skip to server:', error);
+            }
+        }
+        
         this.mathMode.targetBank = bankNumber;
+        this.currentBank = bankNumber; // Keep game play bank in sync
         this.updateMathBankDisplay(); // This now updates the main ammunition bank
         this.updateMathLog(); // Update log when switching banks
         this.generateMathProblem(); // Generate new problem with current generator selection
@@ -795,7 +863,9 @@ class SpaceshipGame {
                 },
                 body: JSON.stringify({
                     level: mathLevel,
-                    generator_type: selectedGenerator
+                    generator_type: selectedGenerator,
+                    username: this.currentUser || 'guest',
+                    bank_number: this.mathMode.targetBank
                 })
             });
             
@@ -810,6 +880,7 @@ class SpaceshipGame {
                 this.mathMode.correctAnswer = data.problem.answer;
                 this.mathMode.currentLevel = data.problem.level;
                 this.mathMode.levelName = data.problem.level_name;
+                this.mathMode.currentProblemId = data.problem.problem_id; // Store problem ID for logging
                 
                 console.log(`📝 [${callId}] Setting problem display to:`, this.mathMode.currentProblem);
                 document.getElementById('mathProblem').textContent = this.mathMode.currentProblem + ' = ?';
@@ -947,17 +1018,41 @@ class SpaceshipGame {
         }
     }
     
-    submitAnswer() {
+    async submitAnswer() {
         const userAnswer = parseInt(document.getElementById('mathAnswer').value);
         this.mathMode.totalCount++;
         
         const isCorrect = userAnswer === this.mathMode.correctAnswer;
         
+        // Calculate time elapsed
+        const timeElapsed = this.mathMode.problemStartTime ? 
+            (Date.now() - this.mathMode.problemStartTime) / 1000 : 0;
+        
         // Calculate reward amount for display
         const rewardAmount = isCorrect ? this.calculateHalfLifeReward() : 0;
         
-        // Log the problem result
+        // Log the problem result locally
         this.logMathProblem(this.mathMode.currentProblem, userAnswer, this.mathMode.correctAnswer, isCorrect, rewardAmount);
+        
+        // Log to server if we have a problem ID
+        if (this.mathMode.currentProblemId) {
+            try {
+                await fetch(`${this.apiBaseUrl}/log_answer`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        problem_id: this.mathMode.currentProblemId,
+                        user_answer: userAnswer,
+                        time_elapsed: timeElapsed
+                    })
+                });
+                console.log('📝 Logged answer to server:', { problem_id: this.mathMode.currentProblemId, user_answer: userAnswer, time_elapsed: timeElapsed });
+            } catch (error) {
+                console.error('❌ Failed to log answer to server:', error);
+            }
+        }
         
         if (isCorrect) {
             this.mathMode.correctCount++;
@@ -1861,27 +1956,109 @@ class SpaceshipGame {
             
             this.updateUI();
             this.showLevelUp();
+            
+            // Automatically initiate math mode after level completion
+            setTimeout(() => {
+                this.initiateMathModeAfterLevel();
+            }, 2500); // Wait 2.5 seconds after level up display
         }
     }
     
     showLevelUp() {
+        // Create main level completion message
         const levelUp = document.createElement('div');
-        levelUp.textContent = `LEVEL ${this.level}!`;
+        levelUp.textContent = `LEVEL ${this.level - 1} COMPLETED!`;
         levelUp.style.position = 'absolute';
-        levelUp.style.top = '50%';
+        levelUp.style.top = '40%';
         levelUp.style.left = '50%';
         levelUp.style.transform = 'translate(-50%, -50%)';
-        levelUp.style.fontSize = '48px';
+        levelUp.style.fontSize = '36px';
         levelUp.style.color = '#00ff00';
         levelUp.style.zIndex = '30';
         levelUp.style.pointerEvents = 'none';
         levelUp.style.textShadow = '0 0 20px #00ff00';
+        levelUp.style.fontWeight = 'bold';
+        
+        // Create ammunition depot message
+        const depotMessage = document.createElement('div');
+        depotMessage.textContent = `You've arrived at the next ammunition depot!`;
+        depotMessage.style.position = 'absolute';
+        depotMessage.style.top = '55%';
+        depotMessage.style.left = '50%';
+        depotMessage.style.transform = 'translate(-50%, -50%)';
+        depotMessage.style.fontSize = '24px';
+        depotMessage.style.color = '#ffff00';
+        depotMessage.style.zIndex = '30';
+        depotMessage.style.pointerEvents = 'none';
+        depotMessage.style.textShadow = '0 0 15px #ffff00';
+        depotMessage.style.fontWeight = 'bold';
         
         document.body.appendChild(levelUp);
+        document.body.appendChild(depotMessage);
         
         setTimeout(() => {
-            document.body.removeChild(levelUp);
+            if (document.body.contains(levelUp)) {
+                document.body.removeChild(levelUp);
+            }
+            if (document.body.contains(depotMessage)) {
+                document.body.removeChild(depotMessage);
+            }
         }, 2000);
+    }
+    
+    async initiateMathModeAfterLevel() {
+        // Only initiate math mode if we're still in playing state (not already in math mode)
+        if (this.gameState === 'playing') {
+            console.log(`🚀 Level ${this.level - 1} completed! Automatically initiating math mode for ammunition depot`);
+            
+            // Set game state to math mode
+            this.gameState = 'math';
+            this.mathMode.active = true;
+            // Shift from bank 0 to bank 1 if on infinite zap ammo
+            this.mathMode.targetBank = this.currentBank === 0 ? 1 : this.currentBank;
+            this.currentBank = this.mathMode.targetBank; // Keep them in sync
+            
+            // Update displays and load generators
+            this.updateMathBankDisplay();
+            this.updateMathLog();
+            await this.loadMathGenerators();
+            
+            // Generate the first math problem
+            this.generateMathProblem();
+            
+            // Show math mode interface
+            document.getElementById('mathMode').style.display = 'block';
+            document.getElementById('mathAnswer').focus();
+            
+            // Show a brief message about the ammunition depot
+            this.showAmmunitionDepotMessage();
+        }
+    }
+    
+    showAmmunitionDepotMessage() {
+        const depotInfo = document.createElement('div');
+        depotInfo.textContent = 'Solve math problems to restock your ammunition!';
+        depotInfo.style.position = 'absolute';
+        depotInfo.style.top = '20%';
+        depotInfo.style.left = '50%';
+        depotInfo.style.transform = 'translate(-50%, -50%)';
+        depotInfo.style.fontSize = '20px';
+        depotInfo.style.color = '#00ffff';
+        depotInfo.style.zIndex = '35';
+        depotInfo.style.pointerEvents = 'none';
+        depotInfo.style.textShadow = '0 0 10px #00ffff';
+        depotInfo.style.fontWeight = 'bold';
+        depotInfo.id = 'depotInfoMessage';
+        
+        document.body.appendChild(depotInfo);
+        
+        // Remove the message after 3 seconds
+        setTimeout(() => {
+            const message = document.getElementById('depotInfoMessage');
+            if (message && document.body.contains(message)) {
+                document.body.removeChild(message);
+            }
+        }, 3000);
     }
     
     createExplosion(x, y, scale = 1) {
@@ -2351,8 +2528,7 @@ class SpaceshipGame {
                         this.selectMathBank(i);
                     } else {
                         // In game mode, select bank for shooting
-                        this.currentBank = i;
-                        this.updateAmmoDisplay();
+                        this.selectBank(i);
                     }
                 });
                 
@@ -2371,17 +2547,9 @@ class SpaceshipGame {
             const maxAmmo = this.maxAmmoPerBank;
             const fillPercent = ammoCount / maxAmmo;
             const isSelected = i === this.currentBank;
-            const isMathTarget = this.gameState === 'math' && i === this.mathMode.targetBank;
             
-            // Update bank styling
-            if (isMathTarget) {
-                // Math mode: highlight target bank with yellow border
-                bankElement.style.background = '#000000';
-                bankElement.style.border = '3px solid #ffff00';
-                bankElement.style.width = '76px'; // Original width
-                bankElement.style.height = '80px'; // Original height
-                bankElement.style.transform = 'translateY(0px)';
-            } else if (isSelected) {
+            // Update bank styling - unified selection mechanism
+            if (isSelected) {
                 // Game mode: highlight selected bank by moving it up and expanding it
                 bankElement.style.background = '#000000';
                 bankElement.style.border = '1px solid #666';
@@ -2452,8 +2620,7 @@ class SpaceshipGame {
         const gap = 2;
         const totalBankWidth = bankWidth + gap;
         const containerWidth = 800;
-        const targetBank = this.gameState === 'math' ? this.mathMode.targetBank : this.currentBank;
-        const selectedBankOffset = (containerWidth / 2) - (targetBank * totalBankWidth + bankWidth / 2);
+        const selectedBankOffset = (containerWidth / 2) - (this.currentBank * totalBankWidth + bankWidth / 2);
         slidingContainer.style.transform = `translateX(${selectedBankOffset}px)`;
     }
     

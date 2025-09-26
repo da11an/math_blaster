@@ -47,7 +47,7 @@ A fun and engaging math game combined with an interactive spaceship defense game
 ```bash
 python start_servers.py
 ```
-This will start both the web server and API server, then open the game in your browser.
+This will start both the web server and API server, then open the game ian your browser.
 
 ### Option 2: Web Browser Only (No User Accounts)
 ```bash

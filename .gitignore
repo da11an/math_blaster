@@ -48,6 +48,7 @@ Thumbs.db
 high_score.json
 user_data/users.json
 *.log
+*.jsonl
 
 # Testing
 .pytest_cache/

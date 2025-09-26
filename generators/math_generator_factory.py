@@ -13,7 +13,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from .math_generator_interface import MathGeneratorInterface
 from .mental_math_wrapper import MentalMathWrapper
-from .simple_math_generator import SimpleMathGenerator
 from .fact_ladder_wrapper import FactLadderWrapper
 
 class MathGeneratorFactory:
@@ -21,7 +20,6 @@ class MathGeneratorFactory:
     
     GENERATORS = {
         'mental': MentalMathWrapper,
-        'simple': SimpleMathGenerator,
         'fact_ladder': FactLadderWrapper
     }
     

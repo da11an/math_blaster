@@ -31,7 +31,7 @@ class ConfigManager:
             "math_generators": {
                 "enabled": ["mental"],
                 "default": "mental",
-                "fallback": "simple"
+                "fallback": "mental"
             },
             "symbols": {
                 "multiplication": "×",

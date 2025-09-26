@@ -1,12 +1,15 @@
 {
     "math_generators": {
-        "enabled": ["mental", "simple", "fact_ladder"],
-        "default": "mental",
-        "fallback": "simple"
+        "enabled": [
+            "mental",
+            "fact_ladder"
+        ],
+        "default": "fact_ladder",
+        "fallback": "mental"
     },
     "symbols": {
-        "multiplication": "×",
-        "division": "÷",
+        "multiplication": "\u00d7",
+        "division": "\u00f7",
         "addition": "+",
         "subtraction": "-"
     },
