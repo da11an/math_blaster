@@ -1095,20 +1095,17 @@ class SpaceshipGame {
         // Calculate reward based on response time (half-life system)
         const rewardAmount = this.calculateHalfLifeReward();
         
-        // Add calculated shots to the target bank
+        // Add calculated shots to the target bank (no limit)
         const bank = this.ammunitionBanks[this.mathMode.targetBank];
-        if (bank.length < this.maxAmmoPerBank) {
-            const ammoType = this.ammoTypes[this.mathMode.targetBank];
-            const shotsToAdd = Math.min(rewardAmount, this.maxAmmoPerBank - bank.length);
-            
-            for (let i = 0; i < shotsToAdd; i++) {
-                bank.push(ammoType);
-            }
-            
-            this.updateAmmoDisplay();
-            // Auto-save user data
-            this.saveUserData();
+        const ammoType = this.ammoTypes[this.mathMode.targetBank];
+        
+        for (let i = 0; i < rewardAmount; i++) {
+            bank.push(ammoType);
         }
+        
+        this.updateAmmoDisplay();
+        // Auto-save user data
+        this.saveUserData();
     }
     
     showMathFeedback(message, color) {
@@ -2510,7 +2507,7 @@ class SpaceshipGame {
                 // Ammo count
                 const ammoCountElement = document.createElement('div');
                 ammoCountElement.className = 'ammo-count';
-                ammoCountElement.textContent = `${this.ammunitionBanks[i].length}/${this.maxAmmoPerBank}`;
+                ammoCountElement.textContent = `${this.ammunitionBanks[i].length}/500`;
                 ammoCountElement.style.cssText = `
                     color: white;
                     font-family: monospace;
@@ -2545,7 +2542,8 @@ class SpaceshipGame {
             
             const ammoCount = this.ammunitionBanks[i].length;
             const maxAmmo = this.maxAmmoPerBank;
-            const fillPercent = ammoCount / maxAmmo;
+            // Cap fill percent at 100% for visual display, but allow unlimited ammo
+            const fillPercent = Math.min(ammoCount / maxAmmo, 1.0);
             const isSelected = i === this.currentBank;
             
             // Update bank styling - unified selection mechanism
@@ -2611,8 +2609,8 @@ class SpaceshipGame {
                 `;
             }
             
-            // Update ammo count
-            ammoCountElement.textContent = `${ammoCount}/${maxAmmo}`;
+            // Update ammo count - show actual count vs 500 scale
+            ammoCountElement.textContent = `${ammoCount}/500`;
         }
         
         // Calculate and apply sliding animation
