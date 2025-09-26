@@ -51,6 +51,14 @@ class MathProblemLogger:
         """Generate unique problem ID"""
         return f"{username}_{timestamp.replace(':', '-').replace('.', '-')}"
     
+    def _clean_math_symbols(self, problem_statement: str) -> str:
+        """Substitute math symbols for simpler logging"""
+        # Replace × with * (multiplication symbol)
+        problem_statement = problem_statement.replace('×', '*')
+        # Replace ÷ with / (division symbol)
+        problem_statement = problem_statement.replace('÷', '/')
+        return problem_statement
+    
     def log_problem_generated(self, username: str, problem_statement: str, 
                             generator_type: str, level: int, level_name: str, 
                             correct_answer: int, bank_number: int = None) -> str:
@@ -59,10 +67,13 @@ class MathProblemLogger:
             timestamp = datetime.now().isoformat()
             problem_id = self.generate_problem_id(username, timestamp)
             
+            # Substitute math symbols for cleaner logging
+            clean_problem_statement = self._clean_math_symbols(problem_statement)
+            
             entry = MathProblemLogEntry(
                 username=username,
                 problem_id=problem_id,
-                problem_statement=problem_statement,
+                problem_statement=clean_problem_statement,
                 generator_type=generator_type,
                 level=level,
                 level_name=level_name,
@@ -71,11 +82,8 @@ class MathProblemLogger:
                 bank_number=bank_number
             )
             
-            # Store in pending problems for later completion
+            # Store in pending problems for later completion (don't log yet)
             self.pending_problems[problem_id] = entry
-            
-            # Write to log file
-            self._write_log_entry(entry)
             
             return problem_id
     
@@ -92,7 +100,7 @@ class MathProblemLogger:
             entry.is_correct = (user_answer == entry.correct_answer)
             entry.status = "answered"
             
-            # Update the log file with the completed entry
+            # Log the answered problem (first and only log entry for this problem)
             self._write_log_entry(entry)
             
             # Remove from pending
@@ -109,7 +117,7 @@ class MathProblemLogger:
             entry = self.pending_problems[problem_id]
             entry.status = f"skipped_{reason}"
             
-            # Update the log file
+            # Log the skipped problem (first and only log entry for this problem)
             self._write_log_entry(entry)
             
             # Remove from pending

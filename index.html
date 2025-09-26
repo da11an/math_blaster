@@ -207,6 +207,7 @@
                     <br>
                     <button onclick="submitAnswer()">Submit Answer</button>
                     <button onclick="exitMathMode()">Back to Game</button>
+                    <button onclick="reviewProgress()" style="background: #0066cc; color: white; border: 1px solid #0066cc;">📊 Review Progress</button>
                     <button onclick="logout()" style="background: #ff4444; color: white; border: 1px solid #ff4444;">Logout</button>
                     <div id="mathStats">
                         <div>Correct: <span id="correctCount">0</span> | Total: <span id="totalCount">0</span> | Accuracy: <span id="accuracy">0%</span></div>
@@ -221,6 +222,20 @@
                     <div id="mathLog" style="flex: 1; overflow-y: auto; font-size: 12px; min-height: 0;">
                         <!-- Math problems will be logged here -->
                     </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Progress Review Modal -->
+        <div id="progressModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 30; display: none;">
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.95); border: 2px solid #0066cc; border-radius: 10px; padding: 20px; max-width: 80%; max-height: 80%; overflow-y: auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="color: #0066cc; margin: 0;">📊 Progress Review</h2>
+                    <button onclick="closeProgressModal()" style="background: #ff4444; color: white; border: 1px solid #ff4444; padding: 5px 10px; border-radius: 3px; cursor: pointer;">✕</button>
+                </div>
+                
+                <div id="progressContent" style="color: #fff;">
+                    <!-- Progress content will be loaded here -->
                 </div>
             </div>
         </div>
@@ -293,5 +308,139 @@
     </div>
     
     <script src="spaceship_game.js?v=11"></script>
+    
+    <script>
+        // Progress Review Functions
+        async function reviewProgress() {
+            const modal = document.getElementById('progressModal');
+            const content = document.getElementById('progressContent');
+            
+            // Show loading state
+            content.innerHTML = '<div style="text-align: center; color: #0066cc;">🔄 Analyzing your progress...</div>';
+            modal.style.display = 'block';
+            
+            try {
+                const response = await fetch(`${game.apiBaseUrl}/rate_session`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: game.currentUser || 'guest'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayProgressData(data.rating);
+                } else {
+                    content.innerHTML = `<div style="color: #ff4444;">❌ Error: ${data.message}</div>`;
+                }
+            } catch (error) {
+                console.error('Error fetching progress data:', error);
+                content.innerHTML = '<div style="color: #ff4444;">❌ Failed to load progress data</div>';
+            }
+        }
+        
+        function displayProgressData(rating) {
+            const content = document.getElementById('progressContent');
+            
+            let html = '';
+            
+            // Summary section
+            if (rating.summary) {
+                html += '<div style="margin-bottom: 20px; padding: 15px; background: rgba(0,102,204,0.1); border: 1px solid #0066cc; border-radius: 5px;">';
+                html += '<h3 style="color: #0066cc; margin-top: 0;">📈 Summary</h3>';
+                
+                if (rating.summary.message) {
+                    html += `<p>${rating.summary.message}</p>`;
+                } else {
+                    html += `<p><strong>Overall Score:</strong> ${rating.summary.overall_score?.toFixed(1) || 'N/A'}</p>`;
+                    html += `<p><strong>Estimated Level:</strong> ${rating.summary.estimated_level || 'N/A'}</p>`;
+                    html += `<p><strong>Recommended Practice Level:</strong> ${rating.summary.recommended_practice_level || 'N/A'}</p>`;
+                    if (rating.summary.progress_notes) {
+                        html += `<p><strong>Notes:</strong> ${rating.summary.progress_notes}</p>`;
+                    }
+                }
+                html += '</div>';
+            }
+            
+            // Metrics section
+            if (rating.metrics && Object.keys(rating.metrics).length > 0) {
+                html += '<div style="margin-bottom: 20px; padding: 15px; background: rgba(0,102,204,0.1); border: 1px solid #0066cc; border-radius: 5px;">';
+                html += '<h3 style="color: #0066cc; margin-top: 0;">📊 Detailed Metrics</h3>';
+                
+                // Overall metrics
+                if (rating.metrics.overall) {
+                    html += '<h4 style="color: #00ff00;">Overall Performance</h4>';
+                    html += `<p>Overall Score: ${(rating.metrics.overall.weighted_score_0_1 * 100).toFixed(1)}%</p>`;
+                    html += `<p>Total Problems: ${rating.metrics.overall.items || 0}</p>`;
+                }
+                
+                // Level-specific metrics
+                if (rating.metrics.levels) {
+                    html += '<h4 style="color: #00ff00;">Performance by Level</h4>';
+                    for (const [level, metrics] of Object.entries(rating.metrics.levels)) {
+                        html += `<div style="margin: 10px 0; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 3px;">`;
+                        html += `<strong>Level ${level}:</strong> `;
+                        html += `Accuracy: ${(metrics.accuracy * 100).toFixed(1)}%, `;
+                        html += `Speed: ${metrics.median_time_all?.toFixed(2) || 'N/A'}s, `;
+                        html += `Count: ${metrics.attempted || 0}`;
+                        html += '</div>';
+                    }
+                }
+                
+                html += '</div>';
+            }
+            
+            // Themes section
+            if (rating.themes && Object.keys(rating.themes).length > 0) {
+                html += '<div style="margin-bottom: 20px; padding: 15px; background: rgba(0,102,204,0.1); border: 1px solid #0066cc; border-radius: 5px;">';
+                html += '<h3 style="color: #0066cc; margin-top: 0;">🎯 Problem Themes</h3>';
+                
+                for (const [theme, count] of Object.entries(rating.themes)) {
+                    if (count > 0) {  // Only show themes with actual occurrences
+                        html += `<div style="margin: 10px 0; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 3px;">`;
+                        html += `<strong>${theme.replace(/_/g, ' ')}:</strong> `;
+                        html += `Count: ${count}`;
+                        html += '</div>';
+                    }
+                }
+                
+                html += '</div>';
+            }
+            
+            // Review problems section
+            if (rating.review_problems && rating.review_problems.length > 0) {
+                html += '<div style="margin-bottom: 20px; padding: 15px; background: rgba(0,102,204,0.1); border: 1px solid #0066cc; border-radius: 5px;">';
+                html += '<h3 style="color: #0066cc; margin-top: 0;">🔍 Recommended Review Problems</h3>';
+                
+                rating.review_problems.forEach((problem, index) => {
+                    html += `<div style="margin: 10px 0; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 3px;">`;
+                    html += `<strong>${index + 1}.</strong> ${problem.problem_statement} (Level ${problem.level})`;
+                    if (problem.hint) {
+                        html += `<br><em style="color: #888;">💡 ${problem.hint}</em>`;
+                    }
+                    html += '</div>';
+                });
+                
+                html += '</div>';
+            }
+            
+            content.innerHTML = html;
+        }
+        
+        function closeProgressModal() {
+            document.getElementById('progressModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        document.getElementById('progressModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeProgressModal();
+            }
+        });
+    </script>
 </body>
 </html>

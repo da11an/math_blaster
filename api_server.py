@@ -74,6 +74,8 @@ class APIHandler(BaseHTTPRequestHandler):
             self.handle_log_skip(data)
         elif path == '/api/math_stats':
             self.handle_math_stats(data)
+        elif path == '/api/rate_session':
+            self.handle_rate_session(data)
         else:
             self.send_error(404, "Not Found")
     
@@ -448,6 +450,48 @@ class APIHandler(BaseHTTPRequestHandler):
                 'success': False,
                 'message': 'Internal server error'
             })
+    
+    def handle_rate_session(self, data):
+        """Handle rating a user's math session"""
+        try:
+            username = data.get('username', None)
+            
+            if not username:
+                self.send_json_response(400, {
+                    'success': False,
+                    'message': 'Missing required field: username'
+                })
+                return
+            
+            # Read all log entries
+            log_entries = []
+            if os.path.exists(math_logger.log_file):
+                with open(math_logger.log_file, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        try:
+                            entry = json.loads(line.strip())
+                            log_entries.append(entry)
+                        except json.JSONDecodeError:
+                            continue
+            
+            # Import and use the rate_session function
+            from rate_session import rate_session
+            
+            # Rate the session
+            rating_result = rate_session(log_entries, username)
+            
+            log_with_timestamp(f"📊 Rated session for user: {username}")
+            self.send_json_response(200, {
+                'success': True,
+                'rating': rating_result
+            })
+            
+        except Exception as e:
+            log_with_timestamp(f"💥 Error rating session: {str(e)}")
+            self.send_json_response(500, {
+                'success': False,
+                'message': 'Internal server error'
+            })
 
 def main():
     """Start the API server"""
@@ -467,6 +511,7 @@ def main():
     print("  POST /api/log_answer - Log math problem answer")
     print("  POST /api/log_skip - Log skipped math problem")
     print("  POST /api/math_stats - Get math problem statistics")
+    print("  POST /api/rate_session - Rate user's math session")
     print("  GET /api/user/{username} - Get user data")
     print("  GET /api/users - List all users")
     print("  GET /api/generators - Get available math generators")
