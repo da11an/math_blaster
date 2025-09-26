@@ -43,6 +43,75 @@ class ItemEval:
 # ------------- Utilities -------------
 
 ISO_TS_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T")
+_MUL_RE = re.compile(r"^\s*(\d+)\s*×\s*(\d+)\s*$")
+_DIV_RE = re.compile(r"^\s*(\d+)\s*÷\s*(\d+)\s*$")
+_ADD_RE = re.compile(r"^\s*(\d+)\s*\+\s*(\d+)\s*$")
+_SUB_RE = re.compile(r"^\s*(\d+)\s*-\s*(\d+)\s*$")
+
+def _make_hint(expr: str, kind: str) -> str:
+    if _looks_like_identity(expr):
+        return "Zero wipes, one keeps."
+    if kind == "parentheses":
+        return "Group first, then multiply."
+    if kind == "divide":
+        m = _DIV_RE.match(expr)
+        if m:
+            a, b = map(int, m.groups())
+            return f"Think inverse: {b}×?={a}."
+        return "Think inverse product."
+    if kind == "multiply":
+        m = _MUL_RE.match(expr)
+        if m:
+            a, b = map(int, m.groups())
+            if 11 <= a <= 15 or 11 <= b <= 15:
+                return "Break into ×10 + ×(rest)."
+            if b == 9 or a == 9:
+                return "×9 = ×10 − the number."
+        return "Use known facts or break apart."
+    if kind == "subtract":
+        return "Use complements to 10 or count up."
+    if kind == "add":
+        return "Make a 10, then add."
+    return "Work step by step."
+
+def _collect_mistakes(items: List[ItemEval]) -> List[Tuple[str, int, str]]:
+    """Return list of (expr_canon, level, hint) for wrong answered items, newest first."""
+    wrong = [it for it in items if it.status == "answered" and not it.correct]
+    # Sort by timestamp desc (newest first); None timestamps last
+    wrong.sort(key=lambda it: (it.timestamp is None, it.timestamp), reverse=True)
+    out = []
+    seen = set()
+    for it in wrong:
+        key = (it.problem_statement, it.level)
+        if key in seen:
+            continue
+        seen.add(key)
+        kind = _op_kind(it.problem_statement)
+        out.append((it.problem_statement, it.level, _make_hint(it.problem_statement, kind)))
+    return out
+
+def _collect_slow(items: List[ItemEval]) -> List[Tuple[str, int, str]]:
+    """Return list of (expr_canon, level, hint) for notably slow division items even if correct."""
+    slow = []
+    for it in items:
+        if it.status != "answered" or it.time_elapsed is None:
+            continue
+        kind = _op_kind(it.problem_statement)
+        if kind != "divide":
+            continue
+        target = _level_time_target(it.level)
+        if it.time_elapsed > max(4.0, 1.5 * target):  # slow threshold
+            slow.append((it.problem_statement, it.level, _make_hint(it.problem_statement, kind)))
+    # Keep newest, dedup
+    # (Items are often already chronological; if you want strict order, sort by timestamp desc.)
+    seen = set()
+    uniq = []
+    for tup in slow:
+        key = (tup[0], tup[1])
+        if key not in seen:
+            seen.add(key)
+            uniq.append(tup)
+    return uniq
 
 def _normalize_expr(expr: str) -> str:
     """
@@ -157,7 +226,8 @@ def rate_session(
     log_items: List[Dict[str, Any]],
     username: str,
     now: datetime | None = None,
-    ops_style: str = "ascii",  # "ascii" or "unicode" for review problem output
+    ops_style: str = "ascii",
+    review_mode: str = "mixed",  # NEW: "themes" | "mistakes" | "mixed"
 ) -> Dict[str, Any]:
     """
     Ingests JSON-like dicts, filters by username, and returns a scoring bundle.
@@ -290,7 +360,10 @@ def rate_session(
         progress_notes = ["Not enough items to assess within-session trend."]
 
     themes = _infer_themes_for_review(items)
-    review_problems = _make_review_problems(themes, recommended_practice_level, n=6, ops_style=ops_style)
+    review_problems = _make_review_problems(
+        themes, recommended_practice_level, n=6, ops_style=ops_style,
+        review_mode=review_mode, items=items  # pass items in
+    )
 
     return {
         "username": username,
@@ -345,55 +418,92 @@ def _infer_themes_for_review(items: List[ItemEval]) -> Dict[str, Any]:
             themes["division_slow"] = 1
     return themes
 
-def _make_review_problems(themes: Dict[str, Any], practice_level: int, n: int = 6, ops_style: str = "ascii") -> List[Dict[str, Any]]:
-    problems = []
-    pool = []
+def _make_review_problems(
+    themes: Dict[str, Any],
+    practice_level: int,
+    n: int = 6,
+    ops_style: str = "ascii",
+    review_mode: str = "mixed",
+    items: List[ItemEval] | None = None,
+) -> List[Dict[str, Any]]:
+    problems: List[Dict[str, Any]] = []
 
     def add(expr_canon: str, lvl: int, hint: str):
         problems.append({"problem_statement": _render_expr(expr_canon, ops_style), "level": lvl, "hint": hint})
 
-    # Identity/zero/one
-    if themes.get("identity_errors"):
-        add("7 × 0", 5, "Zero rule: anything times 0 is 0.")
-        add("1 × 14", 7, "One rule: ×1 keeps the number.")
-        add("3 × 1", 5, "One rule: ×1 keeps the number.")
-        add("20 + 0", 1, "Adding 0 keeps the number.")
-        add("18 ÷ 1", 6, "Division by 1 keeps the number.")
+    # 1) Mistake-based set (exact replays)
+    mistake_pool = _collect_mistakes(items or [])
+    slow_pool = _collect_slow(items or [])
 
-    # Parentheses / order
-    if themes.get("parentheses_errors"):
-        add("(6 + 20) × 9", 9, "Group first: 26×9 = 20×9 + 6×9.")
-        add("(3 + 16) × 12", 9, "Group first or distribute: 19×12.")
-        add("12 × (5 + 7)", 9, "Group first: 12×12.")
+    if review_mode in ("mistakes", "mixed"):
+        # Take mistakes first
+        for expr, lvl, hint in mistake_pool:
+            add(expr, lvl, hint)
+            if len(problems) >= (n if review_mode == "mistakes" else math.ceil(n/2)):
+                break
+        # If few/no mistakes, consider slow division items
+        if len(problems) < (n if review_mode == "mistakes" else math.ceil(n/2)):
+            for expr, lvl, hint in slow_pool:
+                # avoid duplicates
+                if not any(p["problem_statement"] == _render_expr(expr, ops_style) for p in problems):
+                    add(expr, lvl, hint)
+                if len(problems) >= (n if review_mode == "mistakes" else math.ceil(n/2)):
+                    break
 
-    # Division accuracy/speed
-    if themes.get("division_errors") or themes.get("division_slow"):
-        add("56 ÷ 4", 8, "Think inverse: 4×?=56.")
-        add("78 ÷ 6", 8, "6×13=78.")
-        add("225 ÷ 15", 8, "15×15=225.")
-        add("36 ÷ 9", 6, "9×4=36.")
+    # 2) Theme-based (fills remaining slots in "mixed" or used entirely in "themes")
+    if review_mode in ("themes", "mixed"):
+        themed = []
+        if themes.get("identity_errors"):
+            themed += [
+                ("7 × 0", 5, "Zero wipes, one keeps."),
+                ("1 × 14", 7, "×1 keeps the number."),
+                ("3 × 1", 5, "×1 keeps the number."),
+                ("20 + 0", 1, "Adding 0 keeps the number."),
+                ("18 ÷ 1", 6, "÷1 keeps the number."),
+            ]
+        if themes.get("parentheses_errors"):
+            themed += [
+                ("(6 + 20) × 9", 9, "Group first, then multiply."),
+                ("(3 + 16) × 12", 9, "Group first or distribute."),
+                ("12 × (5 + 7)", 9, "Group first."),
+            ]
+        if themes.get("division_errors") or themes.get("division_slow"):
+            themed += [
+                ("56 ÷ 4", 8, "Think inverse: 4×?=56."),
+                ("78 ÷ 6", 8, "6×13=78."),
+                ("225 ÷ 15", 8, "15×15=225."),
+                ("36 ÷ 9", 6, "9×4=36."),
+            ]
+        if themes.get("subtraction_slips"):
+            themed += [
+                ("12 - 5", 2, "Use complements: (10−5)+2."),
+                ("14 - 7", 2, "Doubles help: 7+7=14."),
+                ("20 - 11", 4, "Count up from 11."),
+            ]
+        if themes.get("multiplication_hardfacts"):
+            themed += [
+                ("13 × 14", 7, "Break into ×10 + ×(rest)."),
+                ("12 × 11", 7, "11 rule: 12×11=132."),
+                ("9 × 15", 7, "×15 = ×10 + ×5."),
+                ("14 × 9", 7, "×9 = ×10 − the number."),
+            ]
 
-    # Subtraction slips
-    if themes.get("subtraction_slips"):
-        add("12 - 5", 2, "Use complements: (10−5)+2.")
-        add("14 - 7", 2, "Doubles help: 7+7=14.")
-        add("20 - 11", 4, "Count up from 11.")
-
-    # Hard multiplication region
-    if themes.get("multiplication_hardfacts"):
-        add("13 × 14", 7, "Break it: 13×(10+4)=130+52.")
-        add("12 × 11", 7, "11 rule: 12×11=132.")
-        add("9 × 15", 7, "Times 15 = ×10 + ×5.")
-        add("14 × 9", 7, "×9 = ×10 − the number.")
-
-    # Backfill from practice level if needed
-    while len(problems) < n:
-        for expr_canon, lvl, hint in _generic_by_level(practice_level, count=n):
-            add(expr_canon, lvl, hint)
+        for expr, lvl, hint in themed:
+            # avoid duplicates
+            if not any(p["problem_statement"] == _render_expr(expr, ops_style) for p in problems):
+                add(expr, lvl, hint)
             if len(problems) >= n:
                 break
 
-    # Deduplicate by text while preserving order
+    # 3) Backfill generics from recommended practice level
+    while len(problems) < n:
+        for expr_canon, lvl, hint in _generic_by_level(practice_level, count=n):
+            if not any(p["problem_statement"] == _render_expr(expr_canon, ops_style) for p in problems):
+                add(expr_canon, lvl, hint)
+            if len(problems) >= n:
+                break
+
+    # Deduplicate while preserving order; trim to n
     seen = set()
     uniq = []
     for p in problems:
@@ -443,5 +553,5 @@ def _generic_by_level(level: int, count: int = 6) -> List[Tuple[str, int, str]]:
     return out
 
 # ------------- Example -------------
-# result = rate_session(log_items, username="symbol_test", ops_style="ascii")
+# result = rate_session(log_items, username="symbol_test", ops_style="ascii", review_mode="themes")
 # print(result)

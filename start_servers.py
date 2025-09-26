@@ -11,6 +11,74 @@ import os
 import signal
 import threading
 
+def kill_existing_servers():
+    """Kill any existing Math Blaster servers using system commands"""
+    print("🔍 Checking for existing servers...")
+    
+    # First, try to kill any Python server processes by name
+    try:
+        # Kill gracefully first
+        subprocess.run(['pkill', '-TERM', '-f', 'server.py'], timeout=5)
+        subprocess.run(['pkill', '-TERM', '-f', 'api_server.py'], timeout=5)
+        print("🔄 Sent termination signals to existing servers")
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
+        pass
+    
+    # Wait for graceful shutdown
+    time.sleep(2)
+    
+    # Check for processes on our ports
+    ports_to_check = [8000, 8001]
+    for port in ports_to_check:
+        try:
+            # Find processes using the port
+            result = subprocess.run(['lsof', '-ti', f':{port}'], 
+                                  capture_output=True, text=True, timeout=5)
+            
+            if result.returncode == 0 and result.stdout.strip():
+                pids = result.stdout.strip().split('\n')
+                for pid in pids:
+                    if pid.strip():
+                        try:
+                            # Check if it's a Math Blaster server
+                            cmd_result = subprocess.run(['ps', '-p', pid, '-o', 'cmd='], 
+                                                      capture_output=True, text=True, timeout=5)
+                            if cmd_result.returncode == 0:
+                                cmdline = cmd_result.stdout.strip()
+                                if 'server.py' in cmdline or 'api_server.py' in cmdline:
+                                    print(f"🔄 Killing server on port {port} (PID: {pid})")
+                                    subprocess.run(['kill', '-TERM', pid], timeout=5)
+                        except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+                            pass
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
+            pass
+    
+    # Wait a bit more for graceful shutdown
+    time.sleep(2)
+    
+    # Force kill any remaining Python server processes
+    try:
+        subprocess.run(['pkill', '-9', '-f', 'server.py'], timeout=5)
+        subprocess.run(['pkill', '-9', '-f', 'api_server.py'], timeout=5)
+        print("🔨 Force killed any remaining server processes")
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
+        pass
+    
+    # Final wait
+    time.sleep(1)
+    
+    # Verify ports are free
+    for port in ports_to_check:
+        try:
+            result = subprocess.run(['lsof', '-ti', f':{port}'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0 and result.stdout.strip():
+                print(f"⚠️  Warning: Port {port} still in use")
+            else:
+                print(f"✅ Port {port} is free")
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
+            print(f"✅ Port {port} appears to be free")
+
 def run_web_server():
     """Run the web server on port 8000"""
     try:
@@ -28,6 +96,9 @@ def run_api_server():
 def main():
     print("🚀 Starting Math Blaster Servers...")
     print("=" * 50)
+    
+    # Kill any existing servers first
+    kill_existing_servers()
     
     # Start API server in a separate thread
     api_thread = threading.Thread(target=run_api_server, daemon=True)
