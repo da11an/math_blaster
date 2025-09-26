@@ -199,6 +199,7 @@ class APIHandler(BaseHTTPRequestHandler):
             
             level = data.get('level', 1)
             generator_type = data.get('generator_type', None)  # Let factory decide default
+            grade_level = data.get('grade_level', 'G3')  # Default to 3rd grade
             username = data.get('username', 'guest')
             bank_number = data.get('bank_number', None)
             
@@ -216,7 +217,7 @@ class APIHandler(BaseHTTPRequestHandler):
             
             # Create factory and generator
             factory = MathGeneratorFactory()
-            generator = factory.create_generator(generator_type)
+            generator = factory.create_generator(generator_type, grade_level=grade_level)
             
             # Log generator details
             generator_name = generator.__class__.__name__

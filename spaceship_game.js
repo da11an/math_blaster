@@ -134,6 +134,7 @@ class SpaceshipGame {
         // Available math generators
         this.availableGenerators = [];
         this.selectedGenerator = 'mental'; // Default generator
+        this.selectedGradeLevel = 'G3'; // Default to 3rd grade
         this.mathProblemGenerationInProgress = false; // Prevent multiple simultaneous calls
         
         // Visual effects
@@ -761,6 +762,39 @@ class SpaceshipGame {
                     }
                 });
                 
+                // Add grade level change event listener
+                const gradeSelect = document.getElementById('gradeLevelSelect');
+                if (gradeSelect) {
+                    gradeSelect.addEventListener('change', async (e) => {
+                        const selectedGrade = e.target.value;
+                        console.log('🔄 Grade level changed to:', selectedGrade);
+                        
+                        // Log skip of current problem if changing grade level
+                        if (this.mathMode.currentProblemId) {
+                            try {
+                                await fetch(`${this.apiBaseUrl}/log_skip`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                        problem_id: this.mathMode.currentProblemId,
+                                        reason: 'grade_level_change'
+                                    })
+                                });
+                                console.log('⏭️ Logged problem skip due to grade level change:', this.mathMode.currentProblemId);
+                            } catch (error) {
+                                console.error('❌ Failed to log skip to server:', error);
+                            }
+                        }
+                        
+                        this.selectedGradeLevel = selectedGrade;
+                        console.log('Updated selectedGradeLevel to:', this.selectedGradeLevel);
+                        // Regenerate problem with new grade level
+                        this.generateMathProblem();
+                    });
+                }
+                
                 console.log('Generators loaded successfully:', data.generators);
                 return data.generators;
                 
@@ -803,7 +837,7 @@ class SpaceshipGame {
         this.mathMode.targetBank = bankNumber;
         this.currentBank = bankNumber; // Keep game play bank in sync
         this.updateMathBankDisplay(); // This now updates the main ammunition bank
-        this.updateMathLog(); // Update log when switching banks
+        this.updateMathLog(); // Update log when switching banks (this will also update mini plot)
         this.generateMathProblem(); // Generate new problem with current generator selection
     }
     
@@ -864,6 +898,7 @@ class SpaceshipGame {
                 body: JSON.stringify({
                     level: mathLevel,
                     generator_type: selectedGenerator,
+                    grade_level: this.selectedGradeLevel || 'G3',
                     username: this.currentUser || 'guest',
                     bank_number: this.mathMode.targetBank
                 })
@@ -1163,8 +1198,13 @@ class SpaceshipGame {
             const statusColor = entry.isCorrect ? '#00ff00' : '#ff4444';
             const ammoReward = entry.isCorrect ? `+${entry.rewardAmount} ${this.ammoTypes[this.mathMode.targetBank].name}` : '';
             
+            // Calculate accuracy and time for mini plot
+            const accuracy = entry.isCorrect ? 100 : 0;
+            const timeInSeconds = entry.responseTime ? entry.responseTime / 1000 : 0;
+            
             logHTML += `
-                <div style="margin-bottom: 8px; padding: 6px; background: rgba(0,0,0,0.3); border-radius: 3px; border-left: 3px solid ${statusColor};">
+                <div class="problem-entry" style="margin-bottom: 8px; padding: 6px; background: rgba(0,0,0,0.3); border-radius: 3px; border-left: 3px solid ${statusColor};" 
+                     data-accuracy="${accuracy}" data-time="${timeInSeconds}" data-level="${this.mathMode.targetBank}">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
                         <span style="color: ${statusColor}; font-weight: bold;">${statusIcon}</span>
                         <span style="color: #888; font-size: 10px;">${timeAgo}</span>
@@ -1180,6 +1220,7 @@ class SpaceshipGame {
         });
         
         logDiv.innerHTML = logHTML;
+        
     }
     
     getTimeAgo(timestamp) {

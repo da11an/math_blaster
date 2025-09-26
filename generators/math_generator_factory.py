@@ -31,7 +31,7 @@ class MathGeneratorFactory:
             # Fallback if config_manager not available
             self.config = None
     
-    def create_generator(self, generator_type: str = None, seed: Optional[int] = None) -> MathGeneratorInterface:
+    def create_generator(self, generator_type: str = None, seed: Optional[int] = None, grade_level: str = "G3") -> MathGeneratorInterface:
         """Create a math generator of the specified type"""
         if generator_type is None:
             generator_type = self.get_default_generator()
@@ -51,7 +51,7 @@ class MathGeneratorFactory:
             else:
                 raise ValueError(f"Generator {generator_type} is disabled")
         
-        return self.GENERATORS[generator_type](seed=seed)
+        return self.GENERATORS[generator_type](seed=seed, grade_band=grade_level)
     
     def get_available_generators(self) -> list:
         """Get list of available generator types"""
