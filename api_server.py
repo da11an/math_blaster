@@ -35,6 +35,8 @@ class APIHandler(BaseHTTPRequestHandler):
             self.handle_list_users()
         elif path == '/api/generators':
             self.handle_get_generators()
+        elif path == '/api/leaderboard':
+            self.handle_get_leaderboard()
         elif path.startswith('/api/user/'):
             username = path.split('/')[-1]
             self.handle_get_user(username)
@@ -354,6 +356,44 @@ class APIHandler(BaseHTTPRequestHandler):
                 'message': f'Error getting generators: {str(e)}'
             })
     
+    def handle_get_leaderboard(self):
+        """Handle getting ammunition leaderboard"""
+        try:
+            log_with_timestamp("🏆 Leaderboard Request: Loading ammunition leaderboard...")
+            
+            # Load user data
+            users = user_manager.list_users()
+            
+            # Calculate total ammunition for each user
+            leaderboard_data = []
+            for username in users:
+                user_data = user_manager.get_user_data(username)
+                if user_data and 'ammunition_banks' in user_data:
+                    total_ammo = sum(user_data['ammunition_banks'].values())
+                    leaderboard_data.append({
+                        'username': username,
+                        'total_ammo': total_ammo,
+                        'ammunition': user_data['ammunition_banks']
+                    })
+            
+            # Sort by total ammunition (descending) and take top 10
+            leaderboard_data.sort(key=lambda x: x['total_ammo'], reverse=True)
+            top_10 = leaderboard_data[:10]
+            
+            log_with_timestamp(f"🏆 Returning leaderboard with {len(top_10)} players")
+            
+            self.send_json_response(200, {
+                'success': True,
+                'leaderboard': top_10
+            })
+            
+        except Exception as e:
+            log_with_timestamp(f"💥 Error getting leaderboard: {str(e)}")
+            self.send_json_response(500, {
+                'success': False,
+                'message': f'Error getting leaderboard: {str(e)}'
+            })
+    
     def send_json_response(self, status_code, data):
         """Send JSON response with CORS headers"""
         self.send_response(status_code)
@@ -516,6 +556,7 @@ def main():
     print("  GET /api/user/{username} - Get user data")
     print("  GET /api/users - List all users")
     print("  GET /api/generators - Get available math generators")
+    print("  GET /api/leaderboard - Get ammunition leaderboard")
     print("Press Ctrl+C to stop the server")
     print("=" * 40)
     
