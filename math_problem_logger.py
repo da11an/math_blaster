@@ -35,7 +35,13 @@ class MathProblemLogEntry:
 class MathProblemLogger:
     """Thread-safe logger for math problems"""
     
-    def __init__(self, log_dir="logs"):
+    def __init__(self, log_dir=None):
+        # Use provided log_dir or get from config
+        if log_dir is None:
+            from config_manager import ConfigManager
+            config = ConfigManager()
+            log_dir = config.get_logs_dir()
+        
         self.log_dir = log_dir
         self.log_file = os.path.join(log_dir, "math_problems.jsonl")
         self.pending_problems = {}  # Track problems waiting for answers

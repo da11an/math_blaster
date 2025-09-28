@@ -11,7 +11,13 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 class UserManager:
-    def __init__(self, data_dir="user_data"):
+    def __init__(self, data_dir=None):
+        # Use provided data_dir or get from config
+        if data_dir is None:
+            from config_manager import ConfigManager
+            config = ConfigManager()
+            data_dir = config.get_user_data_dir()
+        
         self.data_dir = data_dir
         self.users_file = os.path.join(data_dir, "users.json")
         self.ensure_data_directory()

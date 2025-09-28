@@ -75,9 +75,10 @@ Play the original command-line math game.
 3. **Logout**: Click "Logout" to switch accounts or play as guest
 
 ### Data Storage
-- User data is stored in `user_data/users.json`
+- User data is stored in `user_data/users.json` (configurable)
 - Ammunition banks and game statistics are preserved between sessions
 - Each user has their own isolated progress
+- Math problem logs are stored in `logs/math_problems.jsonl` (configurable)
 
 ## 🎯 Game Modes
 
@@ -98,6 +99,49 @@ Play the original command-line math game.
 - **Level Completion**: Progress to next level
 - **Math Accuracy**: Better accuracy = better ammunition quality
 - **Speed Bonus**: Faster math answers = more ammunition
+
+## ⚙️ Configuration
+
+The application supports configurable file paths for shared data storage across multiple instances.
+
+### File Path Configuration
+
+Edit `config.json` to customize where data files are stored:
+
+```json
+{
+    "file_paths": {
+        "user_data_dir": "/shared/path/user_data",
+        "logs_dir": "/shared/path/logs"
+    }
+}
+```
+
+### Shared Data Setup
+
+To run multiple instances with shared data:
+
+1. **Create shared directories**:
+   ```bash
+   mkdir -p /shared/path/user_data
+   mkdir -p /shared/path/logs
+   ```
+
+2. **Update config.json**:
+   ```json
+   {
+       "file_paths": {
+           "user_data_dir": "/shared/path/user_data",
+           "logs_dir": "/shared/path/logs"
+       }
+   }
+   ```
+
+3. **Start multiple instances** - they will all use the same data files
+
+### Default Paths
+- User data: `user_data/` (relative to app directory)
+- Logs: `logs/` (relative to app directory)
 
 ## 🛠️ Technical Details
 

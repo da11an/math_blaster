@@ -42,6 +42,10 @@ class ConfigManager:
             "settings": {
                 "use_proper_math_symbols": True,
                 "enable_fallback": True
+            },
+            "file_paths": {
+                "user_data_dir": "user_data",
+                "logs_dir": "logs"
             }
         }
     
@@ -62,6 +66,14 @@ class ConfigManager:
     def get_default_generator(self) -> str:
         """Get the default math generator"""
         return self.config.get("math_generators", {}).get("default", "mental")
+    
+    def get_user_data_dir(self) -> str:
+        """Get the user data directory path"""
+        return self.config.get("file_paths", {}).get("user_data_dir", "user_data")
+    
+    def get_logs_dir(self) -> str:
+        """Get the logs directory path"""
+        return self.config.get("file_paths", {}).get("logs_dir", "logs")
     
     def get_fallback_generator(self) -> str:
         """Get the fallback math generator"""

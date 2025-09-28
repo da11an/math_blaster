@@ -16,5 +16,9 @@
     "settings": {
         "use_proper_math_symbols": true,
         "enable_fallback": true
+    },
+    "file_paths": {
+        "user_data_dir": "user_data",
+        "logs_dir": "logs"
     }
 }
