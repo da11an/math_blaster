@@ -1,0 +1,1856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Visual Modules - Direct Loading</title>
+    <link rel="stylesheet" href="html_visual_modules/shared-styles.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            background: #0c0c0c;
+            color: #00ff00;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #00ff00;
+            padding-bottom: 20px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        .header p {
+            margin: 10px 0 0 0;
+            color: #ccc;
+            font-size: 1.1em;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .control-panel {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 20px;
+            height: fit-content;
+        }
+
+        .control-panel h2 {
+            margin-top: 0;
+            color: #00ff00;
+            text-align: center;
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            background: #1a1a1a;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .form-group select:focus {
+            outline: none;
+            border-color: #00ff00;
+            box-shadow: 0 0 5px #00ff00;
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 15px;
+            background: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: background 0.3s;
+        }
+
+        .generate-btn:hover {
+            background: #0088ff;
+        }
+
+        .generate-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        .visual-area {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .visual-area h2 {
+            margin-top: 0;
+            color: #00ff00;
+            text-align: center;
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 10px;
+        }
+
+        .visual-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .message.info {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+        }
+
+        .message.warning {
+            background: rgba(255, 165, 0, 0.1);
+            border: 1px solid #ffa500;
+            color: #ffa500;
+        }
+
+        .message.error {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid #ff0000;
+            color: #ff0000;
+        }
+
+        .visual-module-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        
+        .visual-canvas {
+            width: 100%;
+            height: 400px;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.8);
+        }
+        
+        .visual-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .visual-controls button {
+            background: #0066cc;
+            color: white;
+            border: 1px solid #0066cc;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: background 0.3s;
+        }
+        
+        .visual-controls button:hover {
+            background: #0088ff;
+        }
+        
+        .visual-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 255, 0, 0.1);
+            border-radius: 6px;
+            border: 1px solid #00ff00;
+        }
+        
+        .problem-statement {
+            color: #00ff00;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .loading {
+            text-align: center;
+            color: #00ff00;
+            font-size: 18px;
+            padding: 50px;
+        }
+
+        .status-bar {
+            margin-top: 20px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .control-panel {
+                order: 2;
+            }
+            
+            .visual-area {
+                order: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 Math Visual Modules</h1>
+    </div>
+
+    <div class="main-container">
+        <div class="control-panel">
+            <h2>🎮 Control Panel</h2>
+            
+            <div class="form-group">
+                <label for="generatorType">Problem Type:</label>
+                <select id="generatorType">
+                    <option value="fact_ladder">Fact Ladder</option>
+                    <option value="mental">Mental Math</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="gradeLevel">Grade Level:</label>
+                <select id="gradeLevel">
+                    <option value="G1">Grade 1</option>
+                    <option value="G2">Grade 2</option>
+                    <option value="G3">Grade 3</option>
+                    <option value="G4">Grade 4</option>
+                    <option value="G5">Grade 5</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="level">Level:</label>
+                <select id="level">
+                    <option value="1">Level 1</option>
+                    <option value="2">Level 2</option>
+                    <option value="3">Level 3</option>
+                    <option value="4">Level 4</option>
+                    <option value="5">Level 5</option>
+                    <option value="6">Level 6</option>
+                    <option value="7">Level 7</option>
+                    <option value="8">Level 8</option>
+                </select>
+            </div>
+
+            <button id="generateBtn" class="generate-btn" onclick="generateProblem()">
+                🎯 Generate Problem
+            </button>
+
+            <div class="status-bar" id="statusBar">
+                Ready to generate problems
+            </div>
+        </div>
+
+        <div class="visual-area">
+            <h2>📊 Visual Module</h2>
+            
+            <div class="visual-container">
+                <div id="messageDisplay" class="message info">
+                    Select a problem type and level to generate a visual
+                </div>
+                
+                <div id="visualContainer">
+                    <div class="loading">
+                        🎯 Ready to visualize math problems!
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include shared utilities -->
+    <script src="html_visual_modules/shared-utils.js"></script>
+    
+    <!-- Include visualizer classes -->
+    <script src="direct_visual_controller.js"></script>
+    
+    <!-- Include the visualizer classes -->
+    <script>
+        // Number Line Visualizer Class
+        window.NumberLineVisualizer = class NumberLineVisualizer {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.problemData = null;
+                this.animationId = null;
+                this.currentStep = 0;
+                this.isAnimating = false;
+                
+                this.setupCanvas();
+                this.setupEventListeners();
+            }
+
+            setupCanvas() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.canvas.width = rect.width * window.devicePixelRatio;
+                this.canvas.height = rect.height * window.devicePixelRatio;
+                this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            loadProblem(problemData) {
+                this.problemData = problemData;
+                this.currentStep = 0;
+                this.isAnimating = false;
+                
+                document.getElementById('problemStatement').textContent = problemData.problem_statement;
+                this.drawNumberLine();
+                this.showInfo();
+            }
+
+            drawNumberLine() {
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const width = canvas.width / window.devicePixelRatio;
+                const height = canvas.height / window.devicePixelRatio;
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+                
+                // Draw background
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillRect(0, 0, width, height);
+                
+                if (!this.problemData) return;
+                
+                // Draw number line
+                const padding = 50;
+                const lineY = height / 2;
+                const lineStartX = padding;
+                const lineEndX = width - padding;
+                
+                // Calculate scale
+                const minVal = Math.min(this.problemData.start_position, this.problemData.result_position) - 2;
+                const maxVal = Math.max(this.problemData.start_position, this.problemData.result_position) + 2;
+                const range = maxVal - minVal;
+                const scale = (lineEndX - lineStartX) / range;
+                
+                // Draw line
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(lineStartX, lineY);
+                ctx.lineTo(lineEndX, lineY);
+                ctx.stroke();
+                
+                // Draw ticks and labels with adaptive spacing
+                let labelInterval = 1;
+                
+                // Determine labeling interval based on range
+                if (range > 50) {
+                    labelInterval = 10; // Label every 10th number
+                } else if (range > 20) {
+                    labelInterval = 5; // Label every 5th number
+                } else if (range > 10) {
+                    labelInterval = 2; // Label every 2nd number
+                }
+                
+                for (let i = minVal; i <= maxVal; i++) {
+                    const x = lineStartX + (i - minVal) * scale;
+                    ctx.beginPath();
+                    ctx.moveTo(x, lineY - 15);
+                    ctx.lineTo(x, lineY + 15);
+                    ctx.stroke();
+                    
+                    // Only label numbers at the specified interval
+                    if (i % labelInterval === 0) {
+                        ctx.fillStyle = '#00ff00';
+                        ctx.font = 'bold 14px Courier New';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(i.toString(), x, lineY + 35);
+                    }
+                }
+                
+                // Draw start position
+                const startX = lineStartX + (this.problemData.start_position - minVal) * scale;
+                ctx.fillStyle = '#00ff00';
+                ctx.beginPath();
+                ctx.arc(startX, lineY, 12, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // Draw ribbons if animation is active
+                if (this.isAnimating) {
+                    this.drawRibbons(startX, lineY, scale, minVal);
+                }
+                
+                // Draw result circle only after ribbons are complete
+                if (this.isAnimating && this.currentStep >= this.getRibbonSegments().length) {
+                    const resultX = lineStartX + (this.problemData.result_position - minVal) * scale;
+                    ctx.fillStyle = '#ffff00';
+                    ctx.beginPath();
+                    ctx.arc(resultX, lineY, 12, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            }
+
+            showHint() {
+                if (!this.problemData) return;
+                
+                const hint = this.problemData.operation === 'addition' 
+                    ? `Start at ${this.problemData.start_position} and move ${this.problemData.change_amount} steps to the right`
+                    : `Start at ${this.problemData.start_position} and move ${this.problemData.change_amount} steps to the left`;
+                
+                this.showInfo(hint);
+            }
+
+            animate() {
+                if (!this.problemData || this.isAnimating) return;
+                
+                this.isAnimating = true;
+                this.currentStep = 0;
+                this.animateMovement();
+            }
+
+            getRibbonSegments() {
+                const start = this.problemData.start_position;
+                const change = this.problemData.change_amount;
+                const operation = this.problemData.operation;
+                
+                const segments = [];
+                let currentPos = start;
+                let remainingChange = Math.abs(change);
+                
+                console.log(`Calculating segments: start=${start}, change=${change}, operation=${operation}`);
+                
+                // Decompose by place value (highest place first)
+                const digits = remainingChange.toString().split('').map(Number);
+                
+                for (let i = 0; i < digits.length; i++) {
+                    const placeValue = Math.pow(10, digits.length - 1 - i);
+                    const digit = digits[i];
+                    const segmentLength = digit * placeValue;
+                    
+                    if (segmentLength > 0) {
+                        const endPos = operation === 'addition' 
+                            ? currentPos + segmentLength - 1  // -1 to get the actual end position
+                            : currentPos - segmentLength + 1; // +1 to get the actual end position
+                            
+                        // Calculate the intermediate result for labeling
+                        const intermediateResult = operation === 'addition' 
+                            ? currentPos + segmentLength
+                            : currentPos - segmentLength;
+                            
+                        segments.push({
+                            start: currentPos,
+                            length: segmentLength,
+                            end: endPos,
+                            intermediateResult: intermediateResult,
+                            calculation: `${currentPos} ${operation === 'addition' ? '+' : '-'} ${segmentLength} = ${intermediateResult}`
+                        });
+                        
+                        currentPos = operation === 'addition' ? endPos + 1 : endPos - 1;
+                    }
+                }
+                
+                console.log(`Final segments:`, segments);
+                return segments;
+            }
+
+            drawRibbons(startX, lineY, scale, minVal) {
+                const ctx = this.ctx;
+                const segments = this.getRibbonSegments();
+                const ribbonColor = '#ff6600'; // Consistent orange color (like leaderboard)
+                const lineWidth = 12;
+                const halfLineWidth = lineWidth / 2; // 6px
+                
+                console.log(`Drawing ribbons: currentStep=${this.currentStep}, segments.length=${segments.length}`);
+                
+                ctx.save();
+                ctx.strokeStyle = ribbonColor;
+                ctx.lineWidth = lineWidth;
+                ctx.lineCap = 'round';
+                
+                let currentX = startX;
+                
+                for (let i = 0; i < Math.min(this.currentStep, segments.length); i++) {
+                    const segment = segments[i];
+                    const segmentLength = segment.length;
+                    
+                    // Calculate segment start and end with gaps for discrete appearance
+                    // 2px gap + half line width (6px) = 8px total gap on each side
+                    const totalGap = 2 + halfLineWidth; // 8px total
+                    
+                    let segmentStartX, segmentEndX;
+                    if (this.problemData.operation === 'addition') {
+                        // Addition: move right, gaps at start and end
+                        segmentStartX = currentX + totalGap; // 8px gap at start
+                        segmentEndX = currentX + (segmentLength * scale) - totalGap; // 8px gap at end
+                    } else {
+                        // Subtraction: move left, gaps at start and end
+                        segmentStartX = currentX - totalGap; // 8px gap at start (left side)
+                        segmentEndX = currentX - (segmentLength * scale) + totalGap; // 8px gap at end (right side)
+                    }
+                    
+                    console.log(`Drawing segment ${i}: start=${segmentStartX}, end=${segmentEndX}, length=${segmentLength}, totalGap=${totalGap}, operation=${this.problemData.operation}`);
+                    
+                    // Draw ribbon segment directly on the number line backbone
+                    ctx.beginPath();
+                    ctx.moveTo(segmentStartX, lineY);
+                    ctx.lineTo(segmentEndX, lineY);
+                    ctx.stroke();
+                    
+                    // Draw calculation label
+                    const labelX = (segmentStartX + segmentEndX) / 2;
+                    const labelY = lineY - 30;
+                    
+                    ctx.fillStyle = ribbonColor;
+                    ctx.font = 'bold 14px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(segment.calculation, labelX, labelY);
+                    
+                    // Move to next segment position (without gaps)
+                    currentX = currentX + (segmentLength * scale * (this.problemData.operation === 'addition' ? 1 : -1));
+                }
+                
+                ctx.restore();
+            }
+
+            animateMovement() {
+                if (!this.isAnimating) return;
+                
+                console.log(`Animation step: ${this.currentStep}`);
+                this.drawNumberLine();
+                
+                this.currentStep++;
+                const segments = this.getRibbonSegments();
+                
+                console.log(`After increment: currentStep=${this.currentStep}, segments.length=${segments.length}`);
+                
+                if (this.currentStep <= segments.length) {
+                    // Still animating segments
+                    console.log(`Continuing animation, next step in 1000ms`);
+                    setTimeout(() => this.animateMovement(), 1000); // 1 second per segment
+                } else if (this.currentStep === segments.length + 1) {
+                    // Show result circle
+                    console.log(`Showing result circle`);
+                    this.drawNumberLine();
+                    setTimeout(() => {
+                        this.isAnimating = false;
+                        this.currentStep = 0;
+                        console.log(`Animation complete`);
+                    }, 1000);
+                }
+            }
+
+            showInfo(message) {
+                const infoDiv = document.getElementById('infoDisplay');
+                if (infoDiv) {
+                    infoDiv.innerHTML = message || 'Number line visualization loaded';
+                }
+            }
+
+            setupEventListeners() {
+                window.addEventListener('resize', () => {
+                    this.setupCanvas();
+                    this.drawNumberLine();
+                });
+            }
+        }
+
+        // Area Model Visualizer Class (extracted from area_models.html)
+        window.AreaModelVisualizer = class AreaModelVisualizer {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.problemData = null;
+                this.showPartialProducts = false;
+                this.isAnimating = false;
+                this.animationStep = 0;
+                
+                this.setupCanvas();
+                this.setupEventListeners();
+            }
+
+            setupCanvas() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.canvas.width = rect.width * window.devicePixelRatio;
+                this.canvas.height = rect.height * window.devicePixelRatio;
+                this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            loadProblem(problemData) {
+                this.problemData = problemData;
+                this.showPartialProducts = false;
+                this.isAnimating = false;
+                this.animationStep = 0;
+                
+                document.getElementById('problemStatement').textContent = problemData.problem_statement;
+                this.drawAreaModel();
+                this.showInfo();
+                this.showDecompositionSteps();
+            }
+
+            drawAreaModel() {
+                if (!this.problemData) return;
+
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const width = canvas.width / window.devicePixelRatio;
+                const height = canvas.height / window.devicePixelRatio;
+
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+
+                // Draw grid
+                MathVisualUtils.drawGrid(ctx, width, height, 20, '#00ff00', 0.1);
+
+                // Calculate area model parameters
+                const padding = 40;
+                const modelWidth = width - 2 * padding;
+                const modelHeight = height - 2 * padding;
+
+                const length = this.problemData.dimensions.length;
+                const width_dim = this.problemData.dimensions.width;
+
+                // Scale to fit canvas
+                const maxDimension = Math.max(length, width_dim);
+                const scale = Math.min(modelWidth / maxDimension, modelHeight / maxDimension) * 0.8;
+                
+                const scaledLength = length * scale;
+                const scaledWidth = width_dim * scale;
+                
+                const startX = padding + (modelWidth - scaledLength) / 2;
+                const startY = padding + (modelHeight - scaledWidth) / 2;
+
+                // Draw main rectangle
+                this.drawRectangle(startX, startY, scaledLength, scaledWidth, '#00ff00', 2);
+
+                // Draw grid lines inside rectangle
+                this.drawInternalGrid(startX, startY, scaledLength, scaledWidth, length, width_dim);
+
+                // Draw labels
+                this.drawLabels(startX, startY, scaledLength, scaledWidth, length, width_dim);
+
+                // Draw partial products if enabled
+                if (this.showPartialProducts && this.problemData.partial_products) {
+                    this.drawPartialProducts(startX, startY, scaledLength, scaledWidth, length, width_dim);
+                }
+            }
+
+            drawRectangle(x, y, width, height, color, lineWidth) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = lineWidth;
+                ctx.strokeRect(x, y, width, height);
+                ctx.restore();
+            }
+
+            drawInternalGrid(startX, startY, scaledLength, scaledWidth, length, width_dim) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = 0.5;
+
+                const cellWidth = scaledLength / length;
+                const cellHeight = scaledWidth / width_dim;
+
+                // Vertical lines
+                for (let i = 1; i < length; i++) {
+                    const x = startX + i * cellWidth;
+                    ctx.beginPath();
+                    ctx.moveTo(x, startY);
+                    ctx.lineTo(x, startY + scaledWidth);
+                    ctx.stroke();
+                }
+
+                // Horizontal lines
+                for (let i = 1; i < width_dim; i++) {
+                    const y = startY + i * cellHeight;
+                    ctx.beginPath();
+                    ctx.moveTo(startX, y);
+                    ctx.lineTo(startX + scaledLength, y);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+
+            drawLabels(startX, startY, scaledLength, scaledWidth, length, width_dim) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                ctx.fillStyle = '#00ff00';
+                ctx.font = '14px Courier New, monospace';
+                ctx.textAlign = 'center';
+
+                // Draw dimension labels
+                const centerX = startX + scaledLength / 2;
+                const centerY = startY + scaledWidth / 2;
+
+                MathVisualUtils.drawGlowText(ctx, `${length}`, centerX, startY - 20, 14);
+                MathVisualUtils.drawGlowText(ctx, `${width_dim}`, startX - 20, centerY, 14);
+                MathVisualUtils.drawGlowText(ctx, `Area = ${length} × ${width_dim} = ${this.problemData.total_area}`, 
+                    centerX, startY + scaledWidth + 20, 14);
+
+                ctx.restore();
+            }
+
+            drawPartialProducts(startX, startY, scaledLength, scaledWidth, length, width_dim) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                ctx.strokeStyle = '#ffff00';
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.2)';
+                ctx.lineWidth = 2;
+
+                const cellWidth = scaledLength / length;
+                const cellHeight = scaledWidth / width_dim;
+
+                for (const partial of this.problemData.partial_products) {
+                    if (partial.coordinates && partial.coordinates.length > 0) {
+                        const regionX = startX + partial.coordinates[0][0] * cellWidth;
+                        const regionY = startY + partial.coordinates[0][1] * cellHeight;
+                        const regionWidth = partial.length * cellWidth;
+                        const regionHeight = partial.width * cellHeight;
+
+                        // Draw highlight
+                        ctx.fillRect(regionX, regionY, regionWidth, regionHeight);
+                        ctx.strokeRect(regionX, regionY, regionWidth, regionHeight);
+
+                        // Draw area label
+                        const labelX = regionX + regionWidth / 2;
+                        const labelY = regionY + regionHeight / 2;
+                        ctx.fillStyle = '#ffff00';
+                        ctx.font = 'bold 12px Courier New';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(`${partial.area}`, labelX, labelY);
+                    }
+                }
+
+                ctx.restore();
+            }
+
+            showHint() {
+                if (!this.problemData) return;
+
+                const hint = this.getHint();
+                this.showInfo(hint);
+            }
+
+            getHint() {
+                if (this.problemData.strategy === 'standard') {
+                    return `Find the area of a rectangle that is ${this.problemData.dimensions.length} units long and ${this.problemData.dimensions.width} units wide`;
+                } else if (this.problemData.strategy === 'partial_products') {
+                    return `Break ${this.problemData.dimensions.length} × ${this.problemData.dimensions.width} into smaller rectangles and add their areas`;
+                } else {
+                    return `Use the distributive property: break one dimension into two parts`;
+                }
+            }
+
+            animate() {
+                if (!this.problemData || this.isAnimating || !this.problemData.partial_products) return;
+                
+                this.isAnimating = true;
+                this.animationStep = 0;
+                this.showInfo('Starting decomposition animation...');
+                
+                // Animate step by step
+                this.animateStep();
+            }
+
+            animateStep() {
+                if (!this.isAnimating) return;
+                
+                // Check if we've completed all partial products
+                if (this.animationStep >= this.problemData.partial_products.length) {
+                    // Final step: show the addition of partial products
+                    this.drawAreaModel();
+                    this.showFinalCalculation();
+                    this.isAnimating = false;
+                    this.showInfo('Animation complete - final calculation shown');
+                    return;
+                }
+
+                // Clear and redraw
+                this.drawAreaModel();
+
+                // Highlight current partial product
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const width = canvas.width / window.devicePixelRatio;
+                const height = canvas.height / window.devicePixelRatio;
+                const padding = 40;
+                const modelWidth = width - 2 * padding;
+                const modelHeight = height - 2 * padding;
+
+                const length = this.problemData.dimensions.length;
+                const width_dim = this.problemData.dimensions.width;
+                const maxDimension = Math.max(length, width_dim);
+                const scale = Math.min(modelWidth / maxDimension, modelHeight / maxDimension) * 0.8;
+                
+                const scaledLength = length * scale;
+                const scaledWidth = width_dim * scale;
+                const startX = padding + (modelWidth - scaledLength) / 2;
+                const startY = padding + (modelHeight - scaledWidth) / 2;
+
+                const cellWidth = scaledLength / length;
+                const cellHeight = scaledWidth / width_dim;
+
+                const partial = this.problemData.partial_products[this.animationStep];
+                
+                // Highlight current step
+                ctx.save();
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 3;
+                
+                if (partial.coordinates && partial.coordinates.length > 0) {
+                    const regionX = startX + partial.coordinates[0][0] * cellWidth;
+                    const regionY = startY + partial.coordinates[0][1] * cellHeight;
+                    const regionWidth = partial.length * cellWidth;
+                    const regionHeight = partial.width * cellHeight;
+                    
+                    ctx.fillRect(regionX, regionY, regionWidth, regionHeight);
+                    ctx.strokeRect(regionX, regionY, regionWidth, regionHeight);
+
+                    // Show step info with dark background
+                    const labelX = regionX + regionWidth / 2;
+                    const labelY = regionY + regionHeight / 2;
+                    const text = `${partial.length} × ${partial.width} = ${partial.area}`;
+                    
+                    // Draw dark background behind text
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                    ctx.fillRect(labelX - 40, labelY - 10, 80, 20);
+                    
+                    MathVisualUtils.drawGlowText(ctx, text, 
+                        labelX, labelY, 14, '#ffffff');
+                } else {
+                    // Fallback: highlight entire rectangle for this partial product
+                    const regionWidth = partial.length * cellWidth;
+                    const regionHeight = partial.width * cellHeight;
+                    const regionX = startX;
+                    const regionY = startY;
+                    
+                    ctx.fillRect(regionX, regionY, regionWidth, regionHeight);
+                    ctx.strokeRect(regionX, regionY, regionWidth, regionHeight);
+
+                    // Show step info with dark background
+                    const labelX = regionX + regionWidth / 2;
+                    const labelY = regionY + regionHeight / 2;
+                    const text = `${partial.length} × ${partial.width} = ${partial.area}`;
+                    
+                    // Draw dark background behind text
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                    ctx.fillRect(labelX - 40, labelY - 10, 80, 20);
+                    
+                    MathVisualUtils.drawGlowText(ctx, text, 
+                        labelX, labelY, 14, '#ffffff');
+                }
+
+                ctx.restore();
+
+                // Update info
+                this.showInfo(`Step ${this.animationStep + 1}: ${partial.length} × ${partial.width} = ${partial.area}`);
+
+                this.animationStep++;
+                setTimeout(() => this.animateStep(), 3000); // Slower timing (3 seconds instead of 1.5)
+            }
+
+            showFinalCalculation() {
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const width = canvas.width / window.devicePixelRatio;
+                const height = canvas.height / window.devicePixelRatio;
+                
+                // Draw final calculation at the bottom
+                const totalArea = this.problemData.total_area;
+                const partialProducts = this.problemData.partial_products;
+                
+                // Create addition string
+                const additions = partialProducts.map(p => p.area.toString()).join(' + ');
+                const finalText = `${additions} = ${totalArea}`;
+                
+                // Position at bottom center
+                const textX = width / 2;
+                const textY = height - 20;
+                
+                // Draw dark background behind text
+                ctx.save();
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                const textWidth = ctx.measureText(finalText).width;
+                ctx.fillRect(textX - textWidth/2 - 10, textY - 15, textWidth + 20, 30);
+                
+                // Draw white text
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(finalText, textX, textY);
+                ctx.restore();
+            }
+
+            showInfo(message) {
+                const infoDiv = document.getElementById('infoDisplay');
+                if (infoDiv) {
+                    infoDiv.innerHTML = message || 'Area model visualization loaded';
+                }
+            }
+
+            showDecompositionSteps() {
+                const stepsDiv = document.getElementById('decompositionSteps');
+                if (stepsDiv && this.problemData.decomposition_steps) {
+                    stepsDiv.innerHTML = this.problemData.decomposition_steps.map(step => 
+                        `<div class="step">${step}</div>`
+                    ).join('');
+                }
+            }
+
+            setupEventListeners() {
+                window.addEventListener('resize', () => {
+                    this.setupCanvas();
+                    this.drawAreaModel();
+                });
+            }
+        }
+
+        // Division Area Model Visualizer Class
+        window.DivisionAreaModelVisualizer = class DivisionAreaModelVisualizer {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.problemData = null;
+                this.showPartialProducts = false;
+                this.isAnimating = false;
+                this.animationStep = 0;
+                
+                this.setupCanvas();
+                this.setupEventListeners();
+            }
+
+            setupCanvas() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.canvas.width = rect.width * window.devicePixelRatio;
+                this.canvas.height = rect.height * window.devicePixelRatio;
+                this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            loadProblem(problemData) {
+                this.problemData = problemData;
+                this.showPartialProducts = false;
+                this.isAnimating = false;
+                this.animationStep = 0;
+                
+                document.getElementById('problemStatement').textContent = problemData.problem_statement;
+                this.drawDivisionAreaModel();
+                this.showInfo();
+                this.showContext();
+            }
+
+            drawDivisionAreaModel() {
+                if (!this.problemData) return;
+
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const width = canvas.width / window.devicePixelRatio;
+                const height = canvas.height / window.devicePixelRatio;
+
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+
+                // Draw grid
+                MathVisualUtils.drawGrid(ctx, width, height, 20, '#00ff00', 0.1);
+
+                // Calculate layout parameters
+                const padding = 40;
+                const modelWidth = width - 2 * padding;
+                const modelHeight = height - 2 * padding;
+
+                const dividend = this.problemData.dividend;
+                const divisor = this.problemData.divisor;
+                const quotient = this.problemData.quotient;
+
+                // Use quotient as length, divisor as width (like multiplication area model)
+                const length = quotient;
+                const width_dim = divisor;
+                const maxDimension = Math.max(length, width_dim);
+                const scale = Math.min(modelWidth / maxDimension, modelHeight / maxDimension) * 0.8;
+                
+                const scaledLength = length * scale;
+                const scaledWidth = width_dim * scale;
+                const startX = padding + (modelWidth - scaledLength) / 2;
+                const startY = padding + (modelHeight - scaledWidth) / 2;
+
+                const cellWidth = scaledLength / length;
+                const cellHeight = scaledWidth / width_dim;
+
+                // Draw main rectangle with bold green outline (like area model)
+                ctx.save();
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(startX, startY, scaledLength, scaledWidth);
+                ctx.restore();
+
+                // Draw grid lines inside rectangle (green like area model)
+                ctx.save();
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = 0.5;
+                
+                // Vertical lines
+                for (let i = 1; i < length; i++) {
+                    const x = startX + i * cellWidth;
+                    ctx.beginPath();
+                    ctx.moveTo(x, startY);
+                    ctx.lineTo(x, startY + scaledWidth);
+                    ctx.stroke();
+                }
+                
+                // Horizontal lines
+                for (let i = 1; i < width_dim; i++) {
+                    const y = startY + i * cellHeight;
+                    ctx.beginPath();
+                    ctx.moveTo(startX, y);
+                    ctx.lineTo(startX + scaledLength, y);
+                    ctx.stroke();
+                }
+                
+                ctx.restore();
+
+                // Draw partial products if enabled
+                if (this.showPartialProducts && this.problemData.partial_products) {
+                    this.drawPartialProducts(startX, startY, cellWidth, cellHeight, length, width_dim);
+                }
+
+                ctx.restore();
+
+                // Draw labels
+                this.drawLabels(width, height, dividend, divisor, quotient);
+                
+                // Draw dimension labels (like area model)
+                this.drawDimensionLabels(startX, startY, scaledLength, scaledWidth, quotient, divisor);
+            }
+
+            drawPartialProducts(startX, startY, cellWidth, cellHeight, length, width_dim) {
+                const ctx = this.ctx;
+                const partialProducts = this.problemData.partial_products;
+                
+                if (partialProducts.length === 0) return;
+
+                let currentX = startX;
+
+                for (let i = 0; i < partialProducts.length; i++) {
+                    const partial = partialProducts[i];
+                    const partialWidth = partial.length * cellWidth;
+                    const partialHeight = partial.width * cellHeight;
+
+                    // Draw partial product rectangle with area model colors (yellow like area model)
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(255, 255, 0, 0.2)'; // Yellow like area model
+                    ctx.strokeStyle = '#ffff00';
+                    ctx.lineWidth = 2;
+                    ctx.fillRect(currentX, startY, partialWidth, partialHeight);
+                    ctx.strokeRect(currentX, startY, partialWidth, partialHeight);
+
+                    // Draw label using glow text (like area model)
+                    const labelX = currentX + partialWidth / 2;
+                    const labelY = startY + partialHeight / 2;
+                    const text = `${partial.area}`;
+                    
+                    ctx.font = '12px Courier New, monospace';
+                    ctx.textAlign = 'center';
+                    MathVisualUtils.drawGlowText(ctx, text, labelX, labelY, 12, '#ffff00');
+
+                    ctx.restore();
+
+                    // Move to next partial product position (don't overlap)
+                    currentX += partialWidth;
+                }
+            }
+
+            drawLabels(width, height, dividend, divisor, quotient) {
+                const ctx = this.ctx;
+                
+                // Draw problem statement
+                ctx.save();
+                ctx.fillStyle = '#000000';
+                ctx.font = '18px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${dividend} ÷ ${divisor} = ${quotient}`, width / 2, 30);
+                ctx.restore();
+            }
+
+            drawDimensionLabels(startX, startY, scaledLength, scaledWidth, quotient, divisor) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                ctx.fillStyle = '#00ff00';
+                ctx.font = '14px Courier New, monospace';
+                ctx.textAlign = 'center';
+
+                // Only show divisor label on the left side (known dimension)
+                const centerY = startY + scaledWidth / 2;
+
+                // Divisor label on the left side
+                MathVisualUtils.drawGlowText(ctx, `${divisor}`, startX - 20, centerY, 14);
+
+                ctx.restore();
+            }
+
+            showHint() {
+                if (!this.problemData) return;
+                
+                const hint = this.getHint();
+                this.showInfo(hint);
+            }
+
+            getHint() {
+                const partialQuotients = this.problemData.partial_quotients;
+                if (partialQuotients && partialQuotients.length > 0) {
+                    const first = partialQuotients[0];
+                    const second = partialQuotients[1];
+                    return `Use partial quotients: ${first.quotient} × ${this.problemData.divisor} = ${first.product}, then ${second.quotient} × ${this.problemData.divisor} = ${second.product}`;
+                } else {
+                    return `Break down the division into manageable chunks using partial quotients`;
+                }
+            }
+
+            animate() {
+                if (!this.problemData || this.isAnimating) return;
+                
+                this.isAnimating = true;
+                this.animationStep = 0;
+                this.showPartialProducts = false;
+                this.showInfo('Starting partial quotients animation...');
+                
+                // Animate step by step
+                this.animateStep();
+            }
+
+            animateStep() {
+                if (!this.isAnimating) return;
+                
+                // Check if we've completed all partial quotients
+                if (this.animationStep >= this.problemData.partial_quotients.length) {
+                    // Final step: show the addition of partial quotients
+                    this.drawDivisionAreaModel();
+                    this.showFinalCalculation();
+                    this.isAnimating = false;
+                    this.showInfo('Animation complete - final calculation shown');
+                    return;
+                }
+
+                // Clear and redraw
+                this.drawDivisionAreaModel();
+
+                // Highlight current partial quotient
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const width = canvas.width / window.devicePixelRatio;
+                const height = canvas.height / window.devicePixelRatio;
+                const padding = 40;
+                const modelWidth = width - 2 * padding;
+                const modelHeight = height - 2 * padding;
+
+                const quotient = this.problemData.quotient;
+                const divisor = this.problemData.divisor;
+                const length = quotient;
+                const width_dim = divisor;
+                const maxDimension = Math.max(length, width_dim);
+                const scale = Math.min(modelWidth / maxDimension, modelHeight / maxDimension) * 0.8;
+                
+                const scaledLength = length * scale;
+                const scaledWidth = width_dim * scale;
+                const startX = padding + (modelWidth - scaledLength) / 2;
+                const startY = padding + (modelHeight - scaledWidth) / 2;
+
+                const cellWidth = scaledLength / length;
+                const cellHeight = scaledWidth / width_dim;
+
+                const partialQuotients = this.problemData.partial_quotients;
+                const current = partialQuotients[this.animationStep];
+                
+                // Calculate cumulative position (don't overlap with previous steps)
+                let highlightX = startX;
+                for (let i = 0; i < this.animationStep; i++) {
+                    highlightX += partialQuotients[i].quotient * cellWidth;
+                }
+                
+                // Highlight current partial quotient region
+                ctx.save();
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.2)'; // Yellow like area model
+                ctx.strokeStyle = '#ffff00';
+                ctx.lineWidth = 2;
+                
+                // Calculate region to highlight
+                const partialWidth = current.quotient * cellWidth;
+                const partialHeight = divisor * cellHeight;
+                
+                ctx.fillRect(highlightX, startY, partialWidth, partialHeight);
+                ctx.strokeRect(highlightX, startY, partialWidth, partialHeight);
+
+                // Show step info using glow text (like area model)
+                const labelX = highlightX + partialWidth / 2;
+                const labelY = startY + partialHeight / 2;
+                const text = `${current.product}`;
+                
+                ctx.font = '12px Courier New, monospace';
+                ctx.textAlign = 'center';
+                MathVisualUtils.drawGlowText(ctx, text, labelX, labelY, 12, '#ffff00');
+                
+                // Show partial quotient label on the top side of highlighted region
+                const partialQuotientLabelX = highlightX + partialWidth / 2;
+                const partialQuotientLabelY = startY - 20;
+                MathVisualUtils.drawGlowText(ctx, `${current.quotient}`, partialQuotientLabelX, partialQuotientLabelY, 14);
+
+                ctx.restore();
+                
+                // Update info
+                this.showInfo(`Step ${this.animationStep + 1}: ${current.quotient} × ${divisor} = ${current.product}`);
+
+                this.animationStep++;
+                setTimeout(() => this.animateStep(), 3000); // Slower timing for complex division
+            }
+
+            showFinalCalculation() {
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const width = canvas.width / window.devicePixelRatio;
+                const height = canvas.height / window.devicePixelRatio;
+                
+                // Draw final calculation at the bottom
+                const quotient = this.problemData.quotient;
+                const partialQuotients = this.problemData.partial_quotients;
+                
+                // Create addition string
+                const additions = partialQuotients.map(p => p.quotient.toString()).join(' + ');
+                const finalText = `${additions} = ${quotient}`;
+                
+                // Position at bottom center
+                const textX = width / 2;
+                const textY = height - 20;
+                
+                // Draw dark background behind text
+                ctx.save();
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                const textWidth = ctx.measureText(finalText).width;
+                ctx.fillRect(textX - textWidth/2 - 10, textY - 15, textWidth + 20, 30);
+                
+                // Draw white text
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(finalText, textX, textY);
+                ctx.restore();
+            }
+
+            showInfo(message) {
+                const infoDiv = document.getElementById('infoDisplay');
+                if (infoDiv) {
+                    infoDiv.innerHTML = message || 'Division area model visualization loaded';
+                }
+            }
+
+            showContext() {
+                const contextDiv = document.getElementById('contextDescription');
+                if (contextDiv && this.problemData.context_description) {
+                    contextDiv.innerHTML = this.problemData.context_description;
+                }
+            }
+
+            setupEventListeners() {
+                window.addEventListener('resize', () => {
+                    this.setupCanvas();
+                    this.drawDivisionAreaModel();
+                });
+            }
+        }
+
+        // Quotative Visualizer Class (extracted from quotative.html)
+        window.QuotativeVisualizer = class QuotativeVisualizer {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.problemData = null;
+                this.showGroups = false;
+                this.isAnimating = false;
+                this.animationStep = 0;
+                
+                this.setupCanvas();
+                this.setupEventListeners();
+            }
+
+            setupCanvas() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.canvas.width = rect.width * window.devicePixelRatio;
+                this.canvas.height = rect.height * window.devicePixelRatio;
+                this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            loadProblem(problemData) {
+                this.problemData = problemData;
+                this.showGroups = false;
+                this.isAnimating = false;
+                this.animationStep = 0;
+                
+                document.getElementById('problemStatement').textContent = problemData.problem_statement;
+                this.drawQuotativeModel();
+                this.showInfo();
+                this.showContext();
+            }
+
+            drawQuotativeModelWithSize(itemSize, itemSpacing) {
+                if (!this.problemData) return;
+
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const width = canvas.width / window.devicePixelRatio;
+                const height = canvas.height / window.devicePixelRatio;
+
+                const padding = 40;
+                const totalItems = this.problemData.total_amount;
+                const groupSize = this.problemData.group_size;
+                const numberOfGroups = this.problemData.number_of_groups;
+                const remainderCount = this.problemData.remainder_count;
+
+                let currentX = padding;
+                let currentY = padding;
+                let itemCount = 0;
+
+                // Draw items with emergency sizing
+                for (let group = 0; group < numberOfGroups; group++) {
+                    const groupWidth = groupSize * (itemSize + itemSpacing) - itemSpacing;
+                    const groupSpacing = itemSpacing * 2;
+                    
+                    // If group doesn't fit on current row, move to next row
+                    if (currentX + groupWidth > width - padding && currentX > padding) {
+                        currentX = padding;
+                        currentY += itemSize + itemSpacing;
+                    }
+
+                    // Draw items in this group FIRST
+                    for (let item = 0; item < groupSize; item++) {
+                        this.drawItem(currentX, currentY, itemSize, itemCount + 1);
+                        
+                        currentX += itemSize + itemSpacing;
+                        itemCount++;
+                    }
+
+                    // Draw group highlight AFTER items (so it appears on top)
+                    if (this.showGroups && (!this.isAnimating || group <= this.animationStep)) {
+                        this.drawGroupHighlight(currentX - groupSize * (itemSize + itemSpacing), currentY - itemSpacing, 
+                            groupWidth, itemSize + itemSpacing, group);
+                    }
+
+                    // Move to next group position
+                    if (group < numberOfGroups - 1) {
+                        currentX += groupSpacing;
+                        if (currentX + groupWidth > width - padding) {
+                            currentX = padding;
+                            currentY += itemSize + itemSpacing;
+                        }
+                    }
+                }
+
+                // Draw remainder items
+                if (remainderCount > 0) {
+                    if (this.showGroups) {
+                        this.drawRemainderHighlight(currentX - itemSpacing, currentY - itemSpacing,
+                            remainderCount * (itemSize + itemSpacing), itemSize + itemSpacing);
+                    }
+
+                    for (let item = 0; item < remainderCount; item++) {
+                        this.drawItem(currentX, currentY, itemSize, itemCount + 1, true);
+                        
+                        currentX += itemSize + itemSpacing;
+                        itemCount++;
+                    }
+                }
+
+                // Draw labels
+                this.drawLabels(width, height, numberOfGroups, groupSize, remainderCount);
+            }
+
+            drawQuotativeModel() {
+                if (!this.problemData) return;
+
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const width = canvas.width / window.devicePixelRatio;
+                const height = canvas.height / window.devicePixelRatio;
+
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+
+                // Draw grid
+                MathVisualUtils.drawGrid(ctx, width, height, 20, '#00ff00', 0.1);
+
+                // Calculate layout parameters
+                const padding = 40;
+                const availableWidth = width - 2 * padding;
+                const availableHeight = height - 2 * padding;
+
+                const totalItems = this.problemData.total_amount;
+                const groupSize = this.problemData.group_size;
+                const numberOfGroups = this.problemData.number_of_groups;
+                const remainderCount = this.problemData.remainder_count;
+
+                // Calculate item size and spacing - ensure groups fit properly
+                const maxItemsPerRow = Math.ceil(Math.sqrt(totalItems));
+                const maxGroupSize = Math.max(groupSize, Math.ceil(Math.sqrt(totalItems)));
+                
+                // Calculate item size to ensure groups fit in available space
+                const maxGroupWidth = availableWidth * 0.8; // Leave 20% margin
+                const maxGroupHeight = availableHeight * 0.8;
+                
+                const itemSize = Math.min(
+                    maxGroupWidth / maxGroupSize,
+                    maxGroupHeight / Math.ceil(totalItems / maxGroupSize),
+                    availableWidth / maxItemsPerRow,
+                    availableHeight / Math.ceil(totalItems / maxItemsPerRow)
+                ) * 0.8;
+                
+                const itemSpacing = itemSize * 0.1;
+
+                let currentX = padding;
+                let currentY = padding;
+                let itemCount = 0;
+
+                // Draw items with proper group boundaries
+                for (let group = 0; group < numberOfGroups; group++) {
+                    // Check if this group would fit on current row
+                    const groupWidth = groupSize * (itemSize + itemSpacing) - itemSpacing;
+                    const groupSpacing = itemSpacing * 2;
+                    
+                    // If group doesn't fit on current row, move to next row
+                    if (currentX + groupWidth > width - padding && currentX > padding) {
+                        currentX = padding;
+                        currentY += itemSize + itemSpacing;
+                    }
+                    
+                    // If group still doesn't fit vertically, reduce item size
+                    if (currentY + itemSize > height - padding) {
+                        // Emergency fallback: reduce item size
+                        const emergencyItemSize = Math.min(itemSize, (height - padding - currentY) / 2);
+                        const emergencyItemSpacing = emergencyItemSize * 0.1;
+                        const emergencyGroupWidth = groupSize * (emergencyItemSize + emergencyItemSpacing) - emergencyItemSpacing;
+                        
+                        // Redraw with smaller items
+                        ctx.clearRect(0, 0, width, height);
+                        MathVisualUtils.drawGrid(ctx, width, height, 20, '#00ff00', 0.1);
+                        
+                        // Use emergency sizing
+                        this.drawQuotativeModelWithSize(emergencyItemSize, emergencyItemSpacing);
+                        return;
+                    }
+
+                    // Draw items in this group FIRST
+                    for (let item = 0; item < groupSize; item++) {
+                        this.drawItem(currentX, currentY, itemSize, itemCount + 1);
+                        
+                        currentX += itemSize + itemSpacing;
+                        itemCount++;
+                    }
+
+                    // Draw group highlight AFTER items (so it appears on top)
+                    if (this.showGroups && (!this.isAnimating || group <= this.animationStep)) {
+                        this.drawGroupHighlight(currentX - groupSize * (itemSize + itemSpacing), currentY - itemSpacing, 
+                            groupWidth, itemSize + itemSpacing, group);
+                    }
+
+                    // Move to next group position (with proper spacing)
+                    if (group < numberOfGroups - 1) {
+                        currentX += groupSpacing;
+                        // If next group doesn't fit, move to next row
+                        if (currentX + groupWidth > width - padding) {
+                            currentX = padding;
+                            currentY += itemSize + itemSpacing;
+                        }
+                    }
+                }
+
+                // Draw remainder items
+                if (remainderCount > 0) {
+                    // Draw remainder highlight
+                    if (this.showGroups) {
+                        this.drawRemainderHighlight(currentX - itemSpacing, currentY - itemSpacing,
+                            remainderCount * (itemSize + itemSpacing), itemSize + itemSpacing);
+                    }
+
+                    for (let item = 0; item < remainderCount; item++) {
+                        this.drawItem(currentX, currentY, itemSize, itemCount + 1, true);
+                        
+                        currentX += itemSize + itemSpacing;
+                        if (currentX + itemSize > width - padding) {
+                            currentX = padding;
+                            currentY += itemSize + itemSpacing;
+                        }
+                        itemCount++;
+                    }
+                }
+
+                // Draw labels
+                this.drawLabels(width, height, numberOfGroups, groupSize, remainderCount);
+            }
+
+            drawItem(x, y, size, number, isRemainder = false) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                
+                // Draw item background
+                ctx.fillStyle = isRemainder ? '#ff0000' : '#00ff00';
+                ctx.fillRect(x, y, size, size);
+                
+                // Draw border
+                ctx.strokeStyle = isRemainder ? '#ff0000' : '#00ff00';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, size, size);
+                
+                // Draw item number
+                MathVisualUtils.drawGlowText(ctx, number.toString(), 
+                    x + size/2, y + size/2, size * 0.3, '#000000');
+                
+                ctx.restore();
+            }
+
+            drawGroupHighlight(x, y, width, height, groupNumber) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                ctx.strokeStyle = '#ff6600'; // Orange instead of yellow for better contrast
+                ctx.fillStyle = 'rgba(255, 102, 0, 0.3)'; // More opaque fill
+                ctx.lineWidth = 3;
+                ctx.fillRect(x, y, width, height);
+                ctx.strokeRect(x, y, width, height);
+
+                // Determine what count to display based on problem type
+                const groupSize = this.problemData.group_size;
+                let displayText;
+                
+                // Check if this is a division problem
+                const isDivision = this.problemData.problem_statement && this.problemData.problem_statement.includes('÷');
+                
+                if (isDivision) {
+                    // For division: show multiplication fact (1 × 14 = 14, 2 × 14 = 28, etc.)
+                    const groupCount = groupNumber + 1;
+                    const product = groupCount * groupSize;
+                    displayText = `${groupCount} × ${groupSize} = ${product}`;
+                } else {
+                    // For multiplication: show cumulative item count (groupSize, groupSize*2, groupSize*3...)
+                    displayText = ((groupNumber + 1) * groupSize).toString();
+                }
+                
+                const textX = x + width/2;
+                const textY = y + height/2;
+                
+                // Draw dark background behind text (larger for division)
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                const textWidth = ctx.measureText(displayText).width;
+                const padding = isDivision ? 15 : 12;
+                ctx.fillRect(textX - textWidth/2 - padding, textY - 12, textWidth + padding*2, 24);
+                
+                // Draw white text for maximum contrast
+                MathVisualUtils.drawGlowText(ctx, displayText, 
+                    textX, textY, isDivision ? 12 : 16, '#ffffff');
+
+                ctx.restore();
+            }
+
+            drawRemainderHighlight(x, y, width, height) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                ctx.strokeStyle = '#ff6600';
+                ctx.fillStyle = 'rgba(255, 102, 0, 0.2)';
+                ctx.lineWidth = 3;
+                ctx.fillRect(x, y, width, height);
+                ctx.strokeRect(x, y, width, height);
+
+                // Draw remainder label
+                MathVisualUtils.drawGlowText(ctx, 'Remainder', 
+                    x + width/2, y - 10, 12, '#ff6600');
+
+                ctx.restore();
+            }
+
+            drawLabels(width, height, numberOfGroups, groupSize, remainderCount) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                ctx.fillStyle = '#00ff00';
+                ctx.font = '16px Courier New, monospace';
+                ctx.textAlign = 'center';
+
+                // Draw summary
+                const summaryY = height - 30;
+                let summaryText = `${numberOfGroups} groups of ${groupSize} = ${numberOfGroups * groupSize}`;
+                if (remainderCount > 0) {
+                    summaryText += ` + ${remainderCount} remainder = ${numberOfGroups * groupSize + remainderCount}`;
+                }
+
+                MathVisualUtils.drawGlowText(ctx, summaryText, width/2, summaryY, 16);
+
+                ctx.restore();
+            }
+
+            showHint() {
+                if (!this.problemData) return;
+
+                const hint = this.getHint();
+                this.showInfo(hint);
+            }
+
+            getHint() {
+                const numberOfGroups = this.problemData.number_of_groups;
+                const groupSize = this.problemData.group_size;
+                const remainderCount = this.problemData.remainder_count;
+                const totalAmount = this.problemData.total_amount;
+                
+                // Check if this is a division problem
+                const isDivision = this.problemData.problem_statement && this.problemData.problem_statement.includes('÷');
+                
+                if (isDivision) {
+                    if (remainderCount > 0) {
+                        return `Count groups: Group 1, Group 2, Group 3... until you have ${numberOfGroups} complete groups`;
+                    } else {
+                        return `Count groups: Group 1, Group 2, Group 3... until you have ${numberOfGroups} groups`;
+                    }
+                } else {
+                    if (remainderCount > 0) {
+                        return `Count by ${groupSize}s: ${groupSize}, ${groupSize * 2}, ${groupSize * 3}... until you reach ${totalAmount}`;
+                    } else {
+                        return `Count by ${groupSize}s: ${groupSize}, ${groupSize * 2}, ${groupSize * 3}... until you reach ${totalAmount}`;
+                    }
+                }
+            }
+
+            animate() {
+                if (!this.problemData || this.isAnimating) return;
+                
+                this.isAnimating = true;
+                this.animationStep = 0;
+                this.showGroups = true;
+                this.showInfo('Starting group animation...');
+                
+                // Start step-by-step animation
+                this.animateStep();
+            }
+
+            animateStep() {
+                if (!this.isAnimating) return;
+                
+                // Check if we've completed all groups
+                if (this.animationStep >= this.problemData.number_of_groups) {
+                    this.isAnimating = false;
+                    this.drawQuotativeModel();
+                    this.showDivisionSummary();
+                    this.showInfo('Animation complete - division summary shown');
+                    return;
+                }
+
+                // Clear and redraw
+                this.drawQuotativeModel();
+
+                // Update info for current step
+                const currentGroup = this.animationStep + 1;
+                const groupSize = this.problemData.group_size;
+                
+                // Check if this is a division problem
+                const isDivision = this.problemData.problem_statement && this.problemData.problem_statement.includes('÷');
+                
+                if (isDivision) {
+                    // For division: show multiplication fact
+                    const product = currentGroup * groupSize;
+                    this.showInfo(`Step ${currentGroup}: ${currentGroup} × ${groupSize} = ${product}`);
+                } else {
+                    // For multiplication: show cumulative item count
+                    const cumulativeCount = currentGroup * groupSize;
+                    this.showInfo(`Step ${currentGroup}: Counted to ${cumulativeCount} (${currentGroup} groups of ${groupSize})`);
+                }
+
+                this.animationStep++;
+                setTimeout(() => this.animateStep(), 1500);
+            }
+
+            showDivisionSummary() {
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const width = canvas.width / window.devicePixelRatio;
+                const height = canvas.height / window.devicePixelRatio;
+                
+                // Check if this is a division problem
+                const isDivision = this.problemData.problem_statement && this.problemData.problem_statement.includes('÷');
+                
+                if (!isDivision) return;
+                
+                // Draw division summary at the bottom
+                const totalAmount = this.problemData.total_amount;
+                const groupSize = this.problemData.group_size;
+                const numberOfGroups = this.problemData.number_of_groups;
+                const remainderCount = this.problemData.remainder_count;
+                
+                let summaryText;
+                if (remainderCount > 0) {
+                    summaryText = `${totalAmount} divides into ${numberOfGroups} groups of ${groupSize} with ${remainderCount} remainder`;
+                } else {
+                    summaryText = `${totalAmount} divides into ${numberOfGroups} groups of ${groupSize}`;
+                }
+                
+                // Position at bottom center
+                const textX = width / 2;
+                const textY = height - 20;
+                
+                // Draw dark background behind text
+                ctx.save();
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                const textWidth = ctx.measureText(summaryText).width;
+                ctx.fillRect(textX - textWidth/2 - 10, textY - 15, textWidth + 20, 30);
+                
+                // Draw white text
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(summaryText, textX, textY);
+                ctx.restore();
+            }
+
+            showInfo(message) {
+                const infoDiv = document.getElementById('infoDisplay');
+                if (infoDiv) {
+                    infoDiv.innerHTML = message || 'Quotative visualization loaded';
+                }
+            }
+
+            showContext() {
+                const contextDiv = document.getElementById('contextDescription');
+                if (contextDiv && this.problemData.context_description) {
+                    contextDiv.innerHTML = this.problemData.context_description;
+                }
+            }
+
+            setupEventListeners() {
+                window.addEventListener('resize', () => {
+                    this.setupCanvas();
+                    this.drawQuotativeModel();
+                });
+            }
+        }
+
+        // Main functionality
+        function generateProblem() {
+            const generatorType = document.getElementById('generatorType').value;
+            const gradeLevel = document.getElementById('gradeLevel').value;
+            const level = parseInt(document.getElementById('level').value);
+            
+            // Map frontend grade levels to backend grade_band values
+            const gradeBandMap = {
+                'G1': 'G1',
+                'G2': 'G2', 
+                'G3': 'G3',
+                'G4': 'G4',
+                'G5': 'G5_6'  // Grade 5 maps to G5_6
+            };
+            
+            const gradeBand = gradeBandMap[gradeLevel];
+            
+            const generateBtn = document.getElementById('generateBtn');
+            const statusBar = document.getElementById('statusBar');
+            
+            generateBtn.disabled = true;
+            generateBtn.textContent = '⏳ Generating...';
+            statusBar.textContent = 'Generating problem...';
+            
+            fetch('http://localhost:8001/api/generate_math_problem', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    generator_type: generatorType,
+                    grade_level: gradeBand,  // Use mapped grade_band value
+                    level: level,
+                    username: 'visual_launcher'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    statusBar.textContent = `Generated: ${data.problem.question}`;
+                    
+                    // Dispatch event for visual controller
+                    const event = new CustomEvent('problemGenerated', {
+                        detail: data.problem
+                    });
+                    document.dispatchEvent(event);
+                } else {
+                    statusBar.textContent = `Error: ${data.message}`;
+                    directVisualController.showMessage(`Error: ${data.message}`, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                statusBar.textContent = `Connection Error: ${error.message}`;
+                directVisualController.showMessage(`Connection Error: ${error.message}`, 'error');
+            })
+            .finally(() => {
+                generateBtn.disabled = false;
+                generateBtn.textContent = '🎯 Generate Problem';
+            });
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            directVisualController = new DirectVisualController();
+            console.log('Direct Visual Controller initialized');
+        });
+    </script>
+</body>
+</html>
+

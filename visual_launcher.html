@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Visual Modules - Standalone Launcher</title>
+    <link rel="stylesheet" href="html_visual_modules/shared-styles.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+            font-family: 'Courier New', monospace;
+            color: #00ff00;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.8);
+            border-bottom: 2px solid #00ff00;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        .header p {
+            margin: 10px 0 0 0;
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .control-panel {
+            flex: 0 0 300px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .problem-generator {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #555;
+            border-radius: 5px;
+            padding: 15px;
+        }
+
+        .problem-generator h3 {
+            margin: 0 0 15px 0;
+            color: #00ff00;
+            font-size: 16px;
+        }
+
+        .problem-type {
+            margin-bottom: 15px;
+        }
+
+        .problem-type label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ccc;
+            font-size: 12px;
+        }
+
+        .problem-type select {
+            width: 100%;
+            background: #222;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 8px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .problem-type input {
+            width: calc(100% - 16px);
+            background: #222;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 8px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .generate-btn {
+            width: 100%;
+            background: #0066cc;
+            color: white;
+            border: 1px solid #0066cc;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .generate-btn:hover {
+            background: #0088ff;
+        }
+
+        .current-problem {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #555;
+            border-radius: 5px;
+            padding: 15px;
+        }
+
+        .current-problem h3 {
+            margin: 0 0 10px 0;
+            color: #00ff00;
+            font-size: 16px;
+        }
+
+        .problem-display {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #00ff00;
+            border-radius: 3px;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 18px;
+            text-align: center;
+            color: #ffff00;
+        }
+
+        .visual-container {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 600px;
+        }
+
+        .visual-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+
+        .visual-title {
+            font-size: 18px;
+            color: #00ff00;
+            margin: 0;
+        }
+
+        .visual-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 8px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+
+        .control-btn:hover {
+            background: #555;
+        }
+
+        .control-btn.primary {
+            background: #0066cc;
+            border-color: #0066cc;
+        }
+
+        .control-btn.primary:hover {
+            background: #0088ff;
+        }
+
+        .control-btn.warning {
+            background: #ff6600;
+            border-color: #ff6600;
+        }
+
+        .control-btn.warning:hover {
+            background: #ff8833;
+        }
+
+        .visual-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            position: relative;
+        }
+
+        .placeholder {
+            color: #666;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .feedback-area {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 3px;
+            min-height: 40px;
+            font-size: 14px;
+        }
+
+        .status-bar {
+            background: rgba(0, 0, 0, 0.8);
+            border-top: 1px solid #333;
+            padding: 10px 20px;
+            text-align: center;
+            color: #ccc;
+            font-size: 12px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧮 Math Visual Modules</h1>
+        <p>Standalone Visual Learning Environment</p>
+    </div>
+
+    <div class="main-container">
+        <div class="control-panel">
+            <div class="problem-generator">
+                <h3>📊 Problem Generator</h3>
+                
+                <div class="problem-type">
+                    <label for="problemType">Problem Type:</label>
+                    <select id="problemType">
+                        <option value="addition">Addition</option>
+                        <option value="subtraction">Subtraction</option>
+                        <option value="multiplication">Multiplication</option>
+                        <option value="division">Division</option>
+                    </select>
+                </div>
+
+                <div class="problem-type">
+                    <label for="difficulty">Difficulty Level:</label>
+                    <select id="difficulty">
+                        <option value="easy">Easy (1-10)</option>
+                        <option value="medium">Medium (1-50)</option>
+                        <option value="hard">Hard (1-100)</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+
+                <div class="problem-type" id="customRange" style="display: none;">
+                    <label for="minValue">Min Value:</label>
+                    <input type="number" id="minValue" value="1" min="1" max="1000">
+                    <label for="maxValue">Max Value:</label>
+                    <input type="number" id="maxValue" value="10" min="1" max="1000">
+                </div>
+
+                <button class="generate-btn" onclick="generateProblem()">
+                    🎲 Generate Problem
+                </button>
+            </div>
+
+            <div class="current-problem">
+                <h3>📝 Current Problem</h3>
+                <div class="problem-display" id="currentProblem">
+                    Click "Generate Problem" to start
+                </div>
+                <div style="font-size: 12px; color: #ccc;">
+                    Answer: <span id="currentAnswer">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="visual-container">
+            <div class="visual-header">
+                <h2 class="visual-title" id="visualTitle">Visual Learning Area</h2>
+                <div class="visual-controls">
+                    <button class="control-btn primary" id="showHintBtn" onclick="showHint()" disabled>
+                        💡 Show Hint
+                    </button>
+                    <button class="control-btn warning" id="animateBtn" onclick="animateVisual()" disabled>
+                        ▶️ Animate
+                    </button>
+                    <button class="control-btn" id="resetBtn" onclick="resetVisual()" disabled>
+                        🔄 Reset
+                    </button>
+                </div>
+            </div>
+
+            <div class="visual-content" id="visualContent">
+                <div class="placeholder">
+                    Generate a problem to see the visual representation
+                </div>
+            </div>
+
+            <div class="feedback-area" id="feedbackArea">
+                <!-- Feedback messages will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span id="statusText">Ready to generate problems</span>
+    </div>
+
+    <script src="html_visual_modules/shared-utils.js"></script>
+    <script src="visual_controller.js"></script>
+</body>
+</html>
+

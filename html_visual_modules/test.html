@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Modules Test Page</title>
+    <link rel="stylesheet" href="shared-styles.css">
+    <style>
+        .test-controls {
+            background: rgba(0, 255, 0, 0.1);
+            border: 2px solid #00ff00;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .test-controls h3 {
+            color: #00ff00;
+            margin-bottom: 15px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            color: #00ff00;
+            display: inline-block;
+            width: 120px;
+            margin-right: 10px;
+        }
+
+        .control-group input, .control-group select {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 5px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .module-selector {
+            margin-bottom: 20px;
+        }
+
+        .module-selector select {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="math-visual-container">
+        <h1 style="text-align: center; color: #00ff00; margin-bottom: 20px;">
+            Visual Modules Test Page
+        </h1>
+
+        <div class="module-selector">
+            <label for="moduleSelect" style="color: #00ff00; font-size: 1.2em;">Select Module:</label>
+            <select id="moduleSelect" onchange="loadModule()">
+                <option value="numberline">Number Line</option>
+                <option value="arrays">Arrays</option>
+                <option value="area_models">Area Models</option>
+                <option value="quotative">Quotative Division</option>
+            </select>
+        </div>
+
+        <div class="test-controls">
+            <h3>Problem Parameters</h3>
+            
+            <!-- Number Line Controls -->
+            <div id="numberlineControls" class="module-controls">
+                <div class="control-group">
+                    <label>Operation:</label>
+                    <select id="numberlineOperation">
+                        <option value="addition">Addition</option>
+                        <option value="subtraction">Subtraction</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Start Value:</label>
+                    <input type="number" id="startValue" value="5" min="0" max="50">
+                </div>
+                <div class="control-group">
+                    <label>Change Value:</label>
+                    <input type="number" id="changeValue" value="3" min="1" max="20">
+                </div>
+                <div class="control-group">
+                    <label>Orientation:</label>
+                    <select id="orientation">
+                        <option value="horizontal">Horizontal</option>
+                        <option value="vertical">Vertical</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Arrays Controls -->
+            <div id="arraysControls" class="module-controls" style="display: none;">
+                <div class="control-group">
+                    <label>Operation:</label>
+                    <select id="arraysOperation">
+                        <option value="multiplication">Multiplication</option>
+                        <option value="division">Division</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Rows:</label>
+                    <input type="number" id="rows" value="4" min="2" max="10">
+                </div>
+                <div class="control-group">
+                    <label>Columns:</label>
+                    <input type="number" id="columns" value="3" min="2" max="10">
+                </div>
+            </div>
+
+            <!-- Area Models Controls -->
+            <div id="areaModelsControls" class="module-controls" style="display: none;">
+                <div class="control-group">
+                    <label>Length:</label>
+                    <input type="number" id="length" value="12" min="2" max="20">
+                </div>
+                <div class="control-group">
+                    <label>Width:</label>
+                    <input type="number" id="width" value="8" min="2" max="20">
+                </div>
+                <div class="control-group">
+                    <label>Strategy:</label>
+                    <select id="strategy">
+                        <option value="standard">Standard</option>
+                        <option value="partial_products">Partial Products</option>
+                        <option value="distributive">Distributive</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Quotative Controls -->
+            <div id="quotativeControls" class="module-controls" style="display: none;">
+                <div class="control-group">
+                    <label>Total Amount:</label>
+                    <input type="number" id="totalAmount" value="17" min="6" max="50">
+                </div>
+                <div class="control-group">
+                    <label>Group Size:</label>
+                    <input type="number" id="groupSize" value="4" min="2" max="10">
+                </div>
+                <div class="control-group">
+                    <label>Measurement:</label>
+                    <select id="measurementType">
+                        <option value="groups">Groups</option>
+                        <option value="length">Length</option>
+                        <option value="capacity">Capacity</option>
+                        <option value="money">Money</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="test-buttons">
+                <button class="math-btn" onclick="generateProblem()">Generate Problem</button>
+                <button class="math-btn" onclick="loadRandomProblem()">Random Problem</button>
+            </div>
+        </div>
+
+        <!-- Visual Module Container -->
+        <div id="visualContainer">
+            <!-- Module will be loaded here -->
+        </div>
+    </div>
+
+    <script src="shared-utils.js"></script>
+    <script>
+        let currentModule = null;
+        let currentModuleType = 'numberline';
+
+        function loadModule() {
+            const moduleType = document.getElementById('moduleSelect').value;
+            currentModuleType = moduleType;
+            
+            // Hide all controls
+            document.querySelectorAll('.module-controls').forEach(control => {
+                control.style.display = 'none';
+            });
+            
+            // Show relevant controls
+            document.getElementById(moduleType + 'Controls').style.display = 'block';
+            
+            // Load the module
+            loadModuleScript(moduleType);
+        }
+
+        function loadModuleScript(moduleType) {
+            // Clear container
+            document.getElementById('visualContainer').innerHTML = '';
+            
+            // Create script element to load module
+            const script = document.createElement('script');
+            script.src = moduleType + '.html';
+            script.onload = () => {
+                // Initialize the appropriate visualizer
+                setTimeout(() => {
+                    initializeVisualizer(moduleType);
+                }, 100);
+            };
+            document.head.appendChild(script);
+        }
+
+        function initializeVisualizer(moduleType) {
+            const container = document.getElementById('visualContainer');
+            
+            // Create canvas element
+            const canvas = document.createElement('canvas');
+            canvas.id = 'testCanvas';
+            canvas.className = 'math-visual-canvas';
+            canvas.style.width = '100%';
+            canvas.style.height = '300px';
+            
+            container.appendChild(canvas);
+            
+            // Initialize visualizer based on type
+            switch(moduleType) {
+                case 'numberline':
+                    currentModule = new NumberLineVisualizer('testCanvas');
+                    break;
+                case 'arrays':
+                    currentModule = new ArraysVisualizer('testCanvas');
+                    break;
+                case 'area_models':
+                    currentModule = new AreaModelsVisualizer('testCanvas');
+                    break;
+                case 'quotative':
+                    currentModule = new QuotativeVisualizer('testCanvas');
+                    break;
+            }
+            
+            // Generate initial problem
+            generateProblem();
+        }
+
+        function generateProblem() {
+            if (!currentModule) return;
+            
+            let problemData;
+            
+            switch(currentModuleType) {
+                case 'numberline':
+                    problemData = generateNumberLineProblem();
+                    break;
+                case 'arrays':
+                    problemData = generateArraysProblem();
+                    break;
+                case 'area_models':
+                    problemData = generateAreaModelsProblem();
+                    break;
+                case 'quotative':
+                    problemData = generateQuotativeProblem();
+                    break;
+            }
+            
+            currentModule.loadProblem(problemData);
+        }
+
+        function generateNumberLineProblem() {
+            const operation = document.getElementById('numberlineOperation').value;
+            const startValue = parseInt(document.getElementById('startValue').value);
+            const changeValue = parseInt(document.getElementById('changeValue').value);
+            const orientation = document.getElementById('orientation').value;
+            
+            let result;
+            if (operation === 'addition') {
+                result = startValue + changeValue;
+            } else {
+                result = Math.max(0, startValue - changeValue);
+            }
+            
+            const minVal = Math.min(startValue, result) - 2;
+            const maxVal = Math.max(startValue, result) + 2;
+            const tickPositions = [];
+            for (let i = minVal; i <= maxVal; i++) {
+                tickPositions.push(i);
+            }
+            
+            return {
+                type: "number_line",
+                operation: operation,
+                orientation: orientation,
+                range: { min: minVal, max: maxVal },
+                tick_interval: 1,
+                tick_positions: tickPositions,
+                start_position: startValue,
+                change_amount: changeValue,
+                result_position: result,
+                show_labels: true,
+                highlight_result: true,
+                problem_statement: `${startValue} ${operation === 'addition' ? '+' : '-'} ${changeValue} = ?`
+            };
+        }
+
+        function generateArraysProblem() {
+            const operation = document.getElementById('arraysOperation').value;
+            const rows = parseInt(document.getElementById('rows').value);
+            const columns = parseInt(document.getElementById('columns').value);
+            
+            if (operation === 'multiplication') {
+                return {
+                    type: "array",
+                    operation: "multiplication",
+                    orientation: "rows_first",
+                    dimensions: { rows: rows, columns: columns },
+                    total_elements: rows * columns,
+                    problem_statement: `${rows} × ${columns} = ?`
+                };
+            } else {
+                return {
+                    type: "array",
+                    operation: "division",
+                    orientation: "rows_first",
+                    dimensions: { rows: rows, columns: columns },
+                    total_elements: rows * columns,
+                    problem_statement: `${rows * columns} ÷ ${rows} = ?`
+                };
+            }
+        }
+
+        function generateAreaModelsProblem() {
+            const length = parseInt(document.getElementById('length').value);
+            const width = parseInt(document.getElementById('width').value);
+            const strategy = document.getElementById('strategy').value;
+            
+            return {
+                type: "area_model",
+                strategy: strategy,
+                dimensions: { length: length, width: width },
+                total_area: length * width,
+                problem_statement: `${length} × ${width} = ?`
+            };
+        }
+
+        function generateQuotativeProblem() {
+            const totalAmount = parseInt(document.getElementById('totalAmount').value);
+            const groupSize = parseInt(document.getElementById('groupSize').value);
+            const measurementType = document.getElementById('measurementType').value;
+            
+            const numberOfGroups = Math.floor(totalAmount / groupSize);
+            const remainderCount = totalAmount % groupSize;
+            
+            return {
+                type: "quotative",
+                measurement_type: measurementType,
+                total_amount: totalAmount,
+                group_size: groupSize,
+                number_of_groups: numberOfGroups,
+                remainder_count: remainderCount,
+                problem_statement: `How many groups of ${groupSize} can be made from ${totalAmount} items?`
+            };
+        }
+
+        function loadRandomProblem() {
+            // Generate random parameters and update controls
+            switch(currentModuleType) {
+                case 'numberline':
+                    document.getElementById('numberlineOperation').value = Math.random() > 0.5 ? 'addition' : 'subtraction';
+                    document.getElementById('startValue').value = Math.floor(Math.random() * 20) + 1;
+                    document.getElementById('changeValue').value = Math.floor(Math.random() * 10) + 1;
+                    break;
+                case 'arrays':
+                    document.getElementById('arraysOperation').value = Math.random() > 0.5 ? 'multiplication' : 'division';
+                    document.getElementById('rows').value = Math.floor(Math.random() * 5) + 2;
+                    document.getElementById('columns').value = Math.floor(Math.random() * 5) + 2;
+                    break;
+                case 'area_models':
+                    document.getElementById('length').value = Math.floor(Math.random() * 15) + 5;
+                    document.getElementById('width').value = Math.floor(Math.random() * 15) + 5;
+                    break;
+                case 'quotative':
+                    document.getElementById('totalAmount').value = Math.floor(Math.random() * 30) + 10;
+                    document.getElementById('groupSize').value = Math.floor(Math.random() * 8) + 2;
+                    break;
+            }
+            
+            generateProblem();
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadModule();
+        });
+    </script>
+</body>
+</html>

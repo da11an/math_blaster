@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Visual Module Test</title>
+    <link rel="stylesheet" href="html_visual_modules/shared-styles.css">
+    <style>
+        body {
+            margin: 20px;
+            font-family: 'Courier New', monospace;
+            background: #0c0c0c;
+            color: #00ff00;
+        }
+        .test-container {
+            border: 2px solid #00ff00;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: 1px solid #0066cc;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-family: 'Courier New', monospace;
+        }
+        button:hover {
+            background: #0088ff;
+        }
+        .log {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #333;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        /* Visual module styles */
+        .visual-module-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        
+        .visual-canvas {
+            width: 100%;
+            height: 300px;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.8);
+        }
+        
+        .visual-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .visual-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 255, 0, 0.1);
+            border-radius: 6px;
+            border: 1px solid #00ff00;
+        }
+        
+        .problem-statement {
+            color: #00ff00;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Direct Visual Module Test</h1>
+    
+    <div class="test-container">
+        <h2>Test Controls</h2>
+        <button onclick="testNumberLine()">Test Number Line</button>
+        <button onclick="testAreaModel()">Test Area Model</button>
+        <button onclick="testQuotative()">Test Quotative</button>
+        <button onclick="clearTest()">Clear</button>
+    </div>
+
+    <div class="test-container">
+        <h2>Visual Module Display</h2>
+        <div id="visualContainer">
+            <div style="text-align: center; color: #666; padding: 50px;">
+                Click a test button to load a visual module directly
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Console Log</h2>
+        <div id="log" class="log"></div>
+    </div>
+
+    <!-- Include shared utilities -->
+    <script src="html_visual_modules/shared-utils.js"></script>
+    
+    <!-- Include visualizer classes directly -->
+    <script>
+        // Number Line Visualizer Class (extracted from numberline.html)
+        class NumberLineVisualizer {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.problemData = null;
+                this.animationId = null;
+                this.currentStep = 0;
+                this.isAnimating = false;
+                
+                this.setupCanvas();
+                this.setupEventListeners();
+            }
+
+            setupCanvas() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.canvas.width = rect.width * window.devicePixelRatio;
+                this.canvas.height = rect.height * window.devicePixelRatio;
+                this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            loadProblem(problemData) {
+                this.problemData = problemData;
+                this.currentStep = 0;
+                this.isAnimating = false;
+                
+                document.getElementById('problemStatement').textContent = problemData.problem_statement;
+                this.drawNumberLine();
+                this.showInfo();
+            }
+
+            drawNumberLine() {
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const width = canvas.width / window.devicePixelRatio;
+                const height = canvas.height / window.devicePixelRatio;
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+                
+                // Draw background
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillRect(0, 0, width, height);
+                
+                if (!this.problemData) return;
+                
+                // Draw number line
+                const padding = 50;
+                const lineY = height / 2;
+                const lineStartX = padding;
+                const lineEndX = width - padding;
+                
+                // Calculate scale
+                const minVal = Math.min(this.problemData.start_position, this.problemData.result_position) - 2;
+                const maxVal = Math.max(this.problemData.start_position, this.problemData.result_position) + 2;
+                const range = maxVal - minVal;
+                const scale = (lineEndX - lineStartX) / range;
+                
+                // Draw line
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(lineStartX, lineY);
+                ctx.lineTo(lineEndX, lineY);
+                ctx.stroke();
+                
+                // Draw ticks and labels
+                for (let i = minVal; i <= maxVal; i++) {
+                    const x = lineStartX + (i - minVal) * scale;
+                    ctx.beginPath();
+                    ctx.moveTo(x, lineY - 15);
+                    ctx.lineTo(x, lineY + 15);
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#00ff00';
+                    ctx.font = 'bold 14px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(i.toString(), x, lineY + 35);
+                }
+                
+                // Draw start position
+                const startX = lineStartX + (this.problemData.start_position - minVal) * scale;
+                ctx.fillStyle = '#00ff00';
+                ctx.beginPath();
+                ctx.arc(startX, lineY, 12, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // Draw result position
+                const resultX = lineStartX + (this.problemData.result_position - minVal) * scale;
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.arc(resultX, lineY, 12, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // Draw labels
+                ctx.fillStyle = '#00ff00';
+                ctx.font = 'bold 16px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText('START', startX, lineY - 25);
+                
+                ctx.fillStyle = '#ffff00';
+                ctx.fillText('RESULT', resultX, lineY - 25);
+            }
+
+            showHint() {
+                if (!this.problemData) return;
+                
+                const hint = this.problemData.operation === 'addition' 
+                    ? `Start at ${this.problemData.start_position} and move ${this.problemData.change_amount} steps to the right`
+                    : `Start at ${this.problemData.start_position} and move ${this.problemData.change_amount} steps to the left`;
+                
+                this.showInfo(hint);
+            }
+
+            animate() {
+                if (!this.problemData || this.isAnimating) return;
+                
+                this.isAnimating = true;
+                this.currentStep = 0;
+                this.animateMovement();
+            }
+
+            animateMovement() {
+                if (!this.isAnimating) return;
+                
+                this.drawNumberLine();
+                
+                // Add animation effect
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const width = canvas.width / window.devicePixelRatio;
+                const height = canvas.height / window.devicePixelRatio;
+                
+                // Draw animated arrow
+                const padding = 50;
+                const lineY = height / 2;
+                const lineStartX = padding;
+                const lineEndX = width - padding;
+                const minVal = Math.min(this.problemData.start_position, this.problemData.result_position) - 2;
+                const maxVal = Math.max(this.problemData.start_position, this.problemData.result_position) + 2;
+                const scale = (lineEndX - lineStartX) / (maxVal - minVal);
+                
+                const startX = lineStartX + (this.problemData.start_position - minVal) * scale;
+                const resultX = lineStartX + (this.problemData.result_position - minVal) * scale;
+                
+                ctx.save();
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(startX, lineY - 30);
+                ctx.lineTo(resultX, lineY - 30);
+                ctx.stroke();
+                
+                // Draw arrowhead
+                const direction = this.problemData.operation === 'addition' ? 1 : -1;
+                const arrowLength = 20;
+                const arrowEndX = resultX + (direction * arrowLength);
+                
+                MathVisualUtils.drawArrow(ctx, resultX, lineY - 30, arrowEndX, lineY - 30, '#ff0000', 2);
+                
+                ctx.restore();
+                
+                this.currentStep++;
+                if (this.currentStep < 100) {
+                    requestAnimationFrame(() => this.animateMovement());
+                } else {
+                    this.isAnimating = false;
+                }
+            }
+
+            showInfo(message) {
+                const infoDiv = document.getElementById('infoDisplay');
+                if (infoDiv) {
+                    infoDiv.innerHTML = message || 'Number line visualization loaded';
+                }
+            }
+
+            setupEventListeners() {
+                window.addEventListener('resize', () => {
+                    this.setupCanvas();
+                    this.drawNumberLine();
+                });
+            }
+        }
+
+        // Global variables
+        let currentVisualizer = null;
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function testNumberLine() {
+            log('🧪 Testing Number Line Module (Direct Load)...');
+            
+            const container = document.getElementById('visualContainer');
+            container.innerHTML = `
+                <div class="visual-module-container">
+                    <div class="problem-statement" id="problemStatement">5 + 7 = ?</div>
+                    <canvas id="numberLineCanvas" class="visual-canvas"></canvas>
+                    <div class="visual-controls">
+                        <button onclick="showHint()">💡 Show Hint</button>
+                        <button onclick="animateVisual()">▶️ Animate</button>
+                        <button onclick="resetVisual()">🔄 Reset</button>
+                    </div>
+                    <div class="visual-info" id="infoDisplay">Number line visualization loaded</div>
+                </div>
+            `;
+            
+            // Initialize the visualizer
+            currentVisualizer = new NumberLineVisualizer('numberLineCanvas');
+            
+            // Load test data
+            const testData = {
+                type: "number_line",
+                operation: "addition",
+                orientation: "horizontal",
+                range: { min: 0, max: 15 },
+                tick_interval: 1,
+                tick_positions: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+                start_position: 5,
+                change_amount: 7,
+                result_position: 12,
+                show_labels: true,
+                highlight_result: true,
+                problem_statement: "5 + 7 = ?"
+            };
+            
+            currentVisualizer.loadProblem(testData);
+            log('✅ Number line visualizer loaded directly');
+        }
+
+        function testAreaModel() {
+            log('🧪 Testing Area Model Module (Direct Load)...');
+            log('❌ Area model not implemented yet - will add next');
+        }
+
+        function testQuotative() {
+            log('🧪 Testing Quotative Module (Direct Load)...');
+            log('❌ Quotative not implemented yet - will add next');
+        }
+
+        function showHint() {
+            if (currentVisualizer && currentVisualizer.showHint) {
+                currentVisualizer.showHint();
+                log('✅ Hint displayed');
+            } else {
+                log('❌ No visualizer available');
+            }
+        }
+
+        function animateVisual() {
+            if (currentVisualizer && currentVisualizer.animate) {
+                currentVisualizer.animate();
+                log('✅ Animation started');
+            } else {
+                log('❌ No visualizer available');
+            }
+        }
+
+        function resetVisual() {
+            if (currentVisualizer && currentVisualizer.loadProblem) {
+                // Reload the same data
+                const testData = {
+                    type: "number_line",
+                    operation: "addition",
+                    start_position: 5,
+                    change_amount: 7,
+                    result_position: 12,
+                    problem_statement: "5 + 7 = ?"
+                };
+                currentVisualizer.loadProblem(testData);
+                log('✅ Visual reset');
+            } else {
+                log('❌ No visualizer available');
+            }
+        }
+
+        function clearTest() {
+            document.getElementById('visualContainer').innerHTML = '<div style="text-align: center; color: #666; padding: 50px;">Click a test button to load a visual module directly</div>';
+            document.getElementById('log').innerHTML = '';
+            currentVisualizer = null;
+        }
+
+        log('🚀 Direct Visual Module Test Page Loaded');
+        log('This uses direct loading instead of iframes');
+    </script>
+</body>
+</html>

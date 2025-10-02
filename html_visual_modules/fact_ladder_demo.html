@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fact Ladder Visual Demo</title>
+    <link rel="stylesheet" href="shared-styles.css">
+    <style>
+        .fact-ladder-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .level-selector {
+            background: rgba(0, 255, 0, 0.1);
+            border: 2px solid #00ff00;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .level-selector h3 {
+            color: #00ff00;
+            margin-bottom: 15px;
+        }
+
+        .level-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .level-btn {
+            background: linear-gradient(45deg, #00ff00, #00cc00);
+            border: none;
+            color: #000;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .level-btn:hover {
+            background: linear-gradient(45deg, #00cc00, #00ff00);
+            transform: translateY(-2px);
+        }
+
+        .level-btn.active {
+            background: linear-gradient(45deg, #ffff00, #ffcc00);
+            color: #000;
+        }
+
+        .level-description {
+            color: #00ff00;
+            font-style: italic;
+            margin-bottom: 15px;
+        }
+
+        .problem-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .visual-container {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff00;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            min-height: 400px;
+        }
+
+        .problem-info {
+            background: rgba(255, 255, 0, 0.1);
+            border: 1px solid #ffff00;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .problem-info h4 {
+            color: #ffff00;
+            margin-bottom: 10px;
+        }
+
+        .problem-info p {
+            color: #00ff00;
+            margin: 5px 0;
+        }
+
+        .visual-canvas {
+            width: 100%;
+            height: 300px;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .no-visual {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+            color: #00ff00;
+            font-size: 1.2em;
+            text-align: center;
+        }
+
+        .grade-selector {
+            margin-bottom: 15px;
+        }
+
+        .grade-selector label {
+            color: #00ff00;
+            margin-right: 10px;
+        }
+
+        .grade-selector select {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 5px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="fact-ladder-container">
+        <h1 style="text-align: center; color: #00ff00; margin-bottom: 20px;">
+            Fact Ladder Visual Demo
+        </h1>
+
+        <div class="level-selector">
+            <h3>Select Level and Grade Band</h3>
+            
+            <div class="grade-selector">
+                <label for="gradeSelect">Grade Band:</label>
+                <select id="gradeSelect" onchange="updateGradeBand()">
+                    <option value="G1">Grade 1</option>
+                    <option value="G2">Grade 2</option>
+                    <option value="G3" selected>Grade 3</option>
+                    <option value="G4">Grade 4</option>
+                    <option value="G5_6">Grade 5-6</option>
+                </select>
+            </div>
+
+            <div class="level-buttons">
+                <button class="level-btn" onclick="selectLevel(1)">Level 1: Basic Addition</button>
+                <button class="level-btn" onclick="selectLevel(2)">Level 2: Basic Subtraction</button>
+                <button class="level-btn" onclick="selectLevel(3)">Level 3: Advanced Addition</button>
+                <button class="level-btn" onclick="selectLevel(4)">Level 4: Advanced Subtraction</button>
+                <button class="level-btn" onclick="selectLevel(5)">Level 5: Basic Multiplication</button>
+                <button class="level-btn" onclick="selectLevel(6)">Level 6: Basic Division</button>
+                <button class="level-btn" onclick="selectLevel(7)">Level 7: Advanced Multiplication</button>
+                <button class="level-btn" onclick="selectLevel(8)">Level 8: Advanced Division</button>
+                <button class="level-btn" onclick="selectLevel(9)">Level 9: Two-Step Problems</button>
+            </div>
+
+            <div class="level-description" id="levelDescription">
+                Select a level to see its description and generate problems.
+            </div>
+
+            <div class="problem-controls">
+                <button class="math-btn" onclick="generateNewProblem()">Generate New Problem</button>
+                <button class="math-btn" onclick="generateMultipleProblems()">Generate 5 Problems</button>
+                <button class="math-btn" onclick="showAllLevels()">Show All Levels</button>
+            </div>
+        </div>
+
+        <div class="visual-container">
+            <div id="problemInfo" class="problem-info" style="display: none;">
+                <h4>Problem Information</h4>
+                <p id="problemText"></p>
+                <p id="problemAnswer"></p>
+                <p id="visualType"></p>
+            </div>
+
+            <div id="visualArea">
+                <div class="no-visual">
+                    Select a level and click "Generate New Problem" to see visualizations
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="shared-utils.js"></script>
+    <script>
+        let currentLevel = null;
+        let currentGradeBand = 'G3';
+        let currentVisualizer = null;
+
+        // Mock data for demonstration (in real implementation, this would come from Python backend)
+        const mockProblems = {
+            G1: {
+                1: [
+                    { question: "3 + 4", answer: 7, type: "addition" },
+                    { question: "5 + 2", answer: 7, type: "addition" },
+                    { question: "7 + 1", answer: 8, type: "addition" }
+                ],
+                2: [
+                    { question: "8 - 3", answer: 5, type: "subtraction" },
+                    { question: "9 - 2", answer: 7, type: "subtraction" },
+                    { question: "6 - 1", answer: 5, type: "subtraction" }
+                ],
+                5: [
+                    { question: "2 × 3", answer: 6, type: "multiplication" },
+                    { question: "5 × 2", answer: 10, type: "multiplication" },
+                    { question: "1 × 4", answer: 4, type: "multiplication" }
+                ],
+                6: [
+                    { question: "6 ÷ 2", answer: 3, type: "division" },
+                    { question: "10 ÷ 5", answer: 2, type: "division" },
+                    { question: "4 ÷ 1", answer: 4, type: "division" }
+                ]
+            },
+            G3: {
+                1: [
+                    { question: "7 + 8", answer: 15, type: "addition" },
+                    { question: "9 + 6", answer: 15, type: "addition" },
+                    { question: "5 + 9", answer: 14, type: "addition" }
+                ],
+                2: [
+                    { question: "15 - 7", answer: 8, type: "subtraction" },
+                    { question: "18 - 9", answer: 9, type: "subtraction" },
+                    { question: "12 - 5", answer: 7, type: "subtraction" }
+                ],
+                3: [
+                    { question: "15 + 8", answer: 23, type: "addition" },
+                    { question: "12 + 18", answer: 30, type: "addition" },
+                    { question: "19 + 11", answer: 30, type: "addition" }
+                ],
+                4: [
+                    { question: "25 - 8", answer: 17, type: "subtraction" },
+                    { question: "35 - 12", answer: 23, type: "subtraction" },
+                    { question: "28 - 15", answer: 13, type: "subtraction" }
+                ],
+                5: [
+                    { question: "7 × 8", answer: 56, type: "multiplication" },
+                    { question: "9 × 6", answer: 54, type: "multiplication" },
+                    { question: "8 × 7", answer: 56, type: "multiplication" }
+                ],
+                6: [
+                    { question: "56 ÷ 7", answer: 8, type: "division" },
+                    { question: "48 ÷ 6", answer: 8, type: "division" },
+                    { question: "63 ÷ 9", answer: 7, type: "division" }
+                ],
+                7: [
+                    { question: "12 × 8", answer: 96, type: "multiplication" },
+                    { question: "15 × 6", answer: 90, type: "multiplication" },
+                    { question: "11 × 9", answer: 99, type: "multiplication" }
+                ],
+                8: [
+                    { question: "96 ÷ 12", answer: 8, type: "division" },
+                    { question: "90 ÷ 15", answer: 6, type: "division" },
+                    { question: "99 ÷ 11", answer: 9, type: "division" }
+                ],
+                9: [
+                    { question: "(7 + 8) × 3", answer: 45, type: "two_step" },
+                    { question: "12 × 5 + 4", answer: 64, type: "two_step" },
+                    { question: "48 ÷ 6 - 2", answer: 6, type: "two_step" }
+                ]
+            }
+        };
+
+        const levelDescriptions = {
+            1: "Addition up to 10 + 10 (grade-capped)",
+            2: "Subtraction within 0..10 (grade-capped)",
+            3: "Addition up to 20 + 20, excluding pairs where both addends ≤ 10 (grade-capped)",
+            4: "Subtraction within 0..40, excluding pairs where both terms ≤ 10 (grade-capped)",
+            5: "Multiplication facts up to 10 × 10 (grade-capped)",
+            6: "Division with divisors 1..10 and quotients 0..10 (grade-capped)",
+            7: "Multiplication up to 15 × 15, excluding pairs where both factors ≤ 10 (grade-capped)",
+            8: "Division with divisors 1..15 and quotients 0..15, excluding pairs where both ≤ 10 (grade-capped)",
+            9: "Two-step problems built only from earlier-level facts (kept integer, grade-capped)"
+        };
+
+        function selectLevel(level) {
+            currentLevel = level;
+            
+            // Update button states
+            document.querySelectorAll('.level-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update description
+            document.getElementById('levelDescription').textContent = 
+                `Level ${level}: ${levelDescriptions[level]}`;
+            
+            // Generate initial problem
+            generateNewProblem();
+        }
+
+        function updateGradeBand() {
+            currentGradeBand = document.getElementById('gradeSelect').value;
+            if (currentLevel) {
+                generateNewProblem();
+            }
+        }
+
+        function generateNewProblem() {
+            if (!currentLevel) {
+                alert('Please select a level first');
+                return;
+            }
+
+            const problems = mockProblems[currentGradeBand]?.[currentLevel];
+            if (!problems || problems.length === 0) {
+                showNoProblems();
+                return;
+            }
+
+            const problem = problems[Math.floor(Math.random() * problems.length)];
+            displayProblem(problem);
+        }
+
+        function generateMultipleProblems() {
+            if (!currentLevel) {
+                alert('Please select a level first');
+                return;
+            }
+
+            const problems = mockProblems[currentGradeBand]?.[currentLevel];
+            if (!problems || problems.length === 0) {
+                showNoProblems();
+                return;
+            }
+
+            // Show first problem
+            const problem = problems[0];
+            displayProblem(problem);
+
+            // Show info about other problems
+            let info = `Showing problem 1 of ${problems.length}:<br>`;
+            problems.forEach((p, i) => {
+                info += `${i + 1}. ${p.question} = ${p.answer}<br>`;
+            });
+            
+            document.getElementById('problemText').innerHTML = info;
+        }
+
+        function showAllLevels() {
+            let allProblems = '';
+            for (let level = 1; level <= 9; level++) {
+                const problems = mockProblems[currentGradeBand]?.[level];
+                if (problems && problems.length > 0) {
+                    allProblems += `<h4>Level ${level}: ${levelDescriptions[level]}</h4>`;
+                    problems.forEach(p => {
+                        allProblems += `${p.question} = ${p.answer}<br>`;
+                    });
+                    allProblems += '<br>';
+                }
+            }
+            
+            document.getElementById('problemText').innerHTML = allProblems;
+            document.getElementById('problemAnswer').textContent = '';
+            document.getElementById('visualType').textContent = '';
+            document.getElementById('problemInfo').style.display = 'block';
+            
+            // Clear visual area
+            document.getElementById('visualArea').innerHTML = 
+                '<div class="no-visual">All levels overview - select a specific level for visualizations</div>';
+        }
+
+        function displayProblem(problem) {
+            // Show problem info
+            document.getElementById('problemText').textContent = problem.question;
+            document.getElementById('problemAnswer').textContent = `Answer: ${problem.answer}`;
+            document.getElementById('problemInfo').style.display = 'block';
+
+            // Create appropriate visual
+            const visualData = createVisualData(problem);
+            document.getElementById('visualType').textContent = `Visual Type: ${visualData.type}`;
+
+            // Clear and create visual area
+            const visualArea = document.getElementById('visualArea');
+            visualArea.innerHTML = '';
+
+            if (visualData.type === 'number_line') {
+                createNumberLineVisual(visualArea, visualData);
+            } else if (visualData.type === 'array') {
+                createArrayVisual(visualArea, visualData);
+            } else if (visualData.type === 'quotative') {
+                createQuotativeVisual(visualArea, visualData);
+            } else {
+                visualArea.innerHTML = '<div class="no-visual">Visual not available for this problem type</div>';
+            }
+        }
+
+        function createVisualData(problem) {
+            const question = problem.question;
+            const answer = problem.answer;
+
+            // Parse question
+            if (question.includes('+')) {
+                const [a, b] = question.split(' + ').map(x => parseInt(x));
+                return {
+                    type: 'number_line',
+                    operation: 'addition',
+                    start_value: a,
+                    change_value: b,
+                    result: answer,
+                    problem_statement: question + ' = ?'
+                };
+            } else if (question.includes('-')) {
+                const [a, b] = question.split(' - ').map(x => parseInt(x));
+                return {
+                    type: 'number_line',
+                    operation: 'subtraction',
+                    start_value: a,
+                    change_value: b,
+                    result: answer,
+                    problem_statement: question + ' = ?'
+                };
+            } else if (question.includes('×')) {
+                const [a, b] = question.split(' × ').map(x => parseInt(x));
+                return {
+                    type: 'array',
+                    operation: 'multiplication',
+                    rows: a,
+                    columns: b,
+                    total: answer,
+                    problem_statement: question + ' = ?'
+                };
+            } else if (question.includes('÷')) {
+                const [a, b] = question.split(' ÷ ').map(x => parseInt(x));
+                return {
+                    type: 'quotative',
+                    total_amount: a,
+                    group_size: b,
+                    number_of_groups: answer,
+                    remainder_count: a % b,
+                    problem_statement: `How many groups of ${b} can be made from ${a} items?`
+                };
+            } else {
+                return {
+                    type: 'text',
+                    problem_statement: question + ' = ?'
+                };
+            }
+        }
+
+        function createNumberLineVisual(container, data) {
+            const canvas = document.createElement('canvas');
+            canvas.className = 'visual-canvas';
+            container.appendChild(canvas);
+
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width = 600;
+            const height = canvas.height = 120;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+
+            // Draw number line
+            const padding = 40;
+            const lineY = height / 2;
+            const lineStartX = padding;
+            const lineEndX = width - padding;
+
+            // Calculate scale
+            const minVal = Math.min(data.start_value, data.result) - 2;
+            const maxVal = Math.max(data.start_value, data.result) + 2;
+            const range = maxVal - minVal;
+            const scale = (lineEndX - lineStartX) / range;
+
+            // Draw line
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(lineStartX, lineY);
+            ctx.lineTo(lineEndX, lineY);
+            ctx.stroke();
+
+            // Draw ticks and labels
+            for (let i = minVal; i <= maxVal; i++) {
+                const x = lineStartX + (i - minVal) * scale;
+                ctx.beginPath();
+                ctx.moveTo(x, lineY - 10);
+                ctx.lineTo(x, lineY + 10);
+                ctx.stroke();
+                
+                ctx.fillStyle = '#00ff00';
+                ctx.font = '12px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText(i.toString(), x, lineY + 25);
+            }
+
+            // Draw start position
+            const startX = lineStartX + (data.start_value - minVal) * scale;
+            ctx.fillStyle = '#00ff00';
+            ctx.beginPath();
+            ctx.arc(startX, lineY, 8, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Draw result position
+            const resultX = lineStartX + (data.result - minVal) * scale;
+            ctx.fillStyle = '#ffff00';
+            ctx.beginPath();
+            ctx.arc(resultX, lineY, 8, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        function createArrayVisual(container, data) {
+            const canvas = document.createElement('canvas');
+            canvas.className = 'visual-canvas';
+            container.appendChild(canvas);
+
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width = 400;
+            const height = canvas.height = 300;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+
+            // Calculate array parameters
+            const padding = 40;
+            const arrayWidth = width - 2 * padding;
+            const arrayHeight = height - 2 * padding;
+
+            const cellWidth = arrayWidth / data.columns;
+            const cellHeight = arrayHeight / data.rows;
+
+            // Draw array items
+            for (let row = 0; row < data.rows; row++) {
+                for (let col = 0; col < data.columns; col++) {
+                    const x = padding + col * cellWidth;
+                    const y = padding + row * cellHeight;
+
+                    // Draw item
+                    ctx.fillStyle = '#00ff00';
+                    ctx.fillRect(x + 2, y + 2, cellWidth - 4, cellHeight - 4);
+                    ctx.strokeStyle = '#00ff00';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x + 2, y + 2, cellWidth - 4, cellHeight - 4);
+
+                    // Draw item number
+                    const itemNumber = row * data.columns + col + 1;
+                    ctx.fillStyle = '#000000';
+                    ctx.font = '14px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(itemNumber.toString(), x + cellWidth/2, y + cellHeight/2 + 5);
+                }
+            }
+
+            // Draw labels
+            ctx.fillStyle = '#00ff00';
+            ctx.font = '16px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${data.rows} × ${data.columns} = ${data.total}`, width/2, height - 10);
+        }
+
+        function createQuotativeVisual(container, data) {
+            const canvas = document.createElement('canvas');
+            canvas.className = 'visual-canvas';
+            container.appendChild(canvas);
+
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width = 400;
+            const height = canvas.height = 300;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+
+            // Calculate layout
+            const padding = 40;
+            const availableWidth = width - 2 * padding;
+            const availableHeight = height - 2 * padding;
+
+            const totalItems = data.total_amount;
+            const groupSize = data.group_size;
+            const numberOfGroups = data.number_of_groups;
+            const remainderCount = data.remainder_count;
+
+            // Calculate item size
+            const maxItemsPerRow = Math.ceil(Math.sqrt(totalItems));
+            const itemSize = Math.min(availableWidth / maxItemsPerRow, availableHeight / Math.ceil(totalItems / maxItemsPerRow)) * 0.8;
+            const itemSpacing = itemSize * 0.1;
+
+            let currentX = padding;
+            let currentY = padding;
+            let itemCount = 0;
+
+            // Draw items
+            for (let group = 0; group < numberOfGroups; group++) {
+                // Draw group highlight
+                ctx.strokeStyle = '#ffff00';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(currentX - itemSpacing, currentY - itemSpacing, 
+                    groupSize * (itemSize + itemSpacing), itemSize + itemSpacing);
+
+                // Draw items in this group
+                for (let item = 0; item < groupSize; item++) {
+                    ctx.fillStyle = '#00ff00';
+                    ctx.fillRect(currentX, currentY, itemSize, itemSize);
+                    ctx.strokeStyle = '#00ff00';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(currentX, currentY, itemSize, itemSize);
+
+                    // Draw item number
+                    ctx.fillStyle = '#000000';
+                    ctx.font = '10px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText((itemCount + 1).toString(), currentX + itemSize/2, currentY + itemSize/2 + 3);
+
+                    currentX += itemSize + itemSpacing;
+                    if (currentX + itemSize > width - padding) {
+                        currentX = padding;
+                        currentY += itemSize + itemSpacing;
+                    }
+                    itemCount++;
+                }
+
+                // Move to next group
+                if (group < numberOfGroups - 1) {
+                    currentX += itemSpacing * 2;
+                    if (currentX + itemSize > width - padding) {
+                        currentX = padding;
+                        currentY += itemSize + itemSpacing * 2;
+                    }
+                }
+            }
+
+            // Draw remainder items
+            if (remainderCount > 0) {
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(currentX - itemSpacing, currentY - itemSpacing,
+                    remainderCount * (itemSize + itemSpacing), itemSize + itemSpacing);
+
+                for (let item = 0; item < remainderCount; item++) {
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillRect(currentX, currentY, itemSize, itemSize);
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(currentX, currentY, itemSize, itemSize);
+
+                    ctx.fillStyle = '#000000';
+                    ctx.font = '10px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText((itemCount + 1).toString(), currentX + itemSize/2, currentY + itemSize/2 + 3);
+
+                    currentX += itemSize + itemSpacing;
+                    itemCount++;
+                }
+            }
+
+            // Draw summary
+            ctx.fillStyle = '#00ff00';
+            ctx.font = '14px Courier New';
+            ctx.textAlign = 'center';
+            let summary = `${numberOfGroups} groups of ${groupSize}`;
+            if (remainderCount > 0) {
+                summary += ` with ${remainderCount} remainder`;
+            }
+            ctx.fillText(summary, width/2, height - 10);
+        }
+
+        function showNoProblems() {
+            document.getElementById('problemInfo').style.display = 'none';
+            document.getElementById('visualArea').innerHTML = 
+                '<div class="no-visual">No problems available for this level and grade band</div>';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set default level
+            selectLevel(1);
+        });
+    </script>
+</body>
+</html>
+

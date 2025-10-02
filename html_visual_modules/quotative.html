@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quotative Division Visual Module</title>
+    <link rel="stylesheet" href="shared-styles.css">
+    <style>
+        .quotative-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .quotative-canvas {
+            width: 100%;
+            height: 300px;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .quotative-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .quotative-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 255, 0, 0.1);
+            border-radius: 6px;
+            border: 1px solid #00ff00;
+        }
+
+        .quotative-step {
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+
+        .context-description {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 0, 0.1);
+            border-radius: 6px;
+            border: 1px solid #ffff00;
+            font-style: italic;
+        }
+
+        .group-item {
+            transition: all 0.3s ease;
+        }
+
+        .group-item.highlighted {
+            animation: group-pulse 1s infinite;
+        }
+
+        @keyframes group-pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .group-highlight {
+            stroke: #ffff00;
+            stroke-width: 3;
+            fill: rgba(255, 255, 0, 0.2);
+        }
+
+        .remainder-highlight {
+            stroke: #ff0000;
+            stroke-width: 3;
+            fill: rgba(255, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="math-visual-container">
+        <div class="math-problem-statement" id="problemStatement">
+            Loading problem...
+        </div>
+        
+        <div class="quotative-container">
+            <canvas id="quotativeCanvas" class="quotative-canvas"></canvas>
+        </div>
+
+        <div class="quotative-controls">
+            <button id="showHintBtn" class="math-btn">Show Hint</button>
+            <button id="showGroupsBtn" class="math-btn">Show Groups</button>
+            <button id="animateBtn" class="math-btn">Animate Grouping</button>
+            <button id="resetBtn" class="math-btn">Reset</button>
+        </div>
+
+        <div class="math-controls">
+            <input type="number" id="answerInput" class="math-answer-input" placeholder="Enter your answer">
+            <button id="submitBtn" class="math-btn">Submit</button>
+        </div>
+
+        <div id="feedbackContainer"></div>
+        <div id="infoContainer" class="quotative-info" style="display: none;"></div>
+        <div id="contextContainer" class="context-description" style="display: none;"></div>
+    </div>
+
+    <script src="shared-utils.js"></script>
+    <script>
+        class QuotativeVisualizer {
+            constructor(containerId = 'quotativeCanvas') {
+                this.canvas = document.getElementById(containerId);
+                this.ctx = MathVisualUtils.getCanvasContext(this.canvas);
+                this.problemData = null;
+                this.showGroups = false;
+                this.isAnimating = false;
+                this.animationStep = 0;
+                
+                this.setupEventListeners();
+                this.setupCanvas();
+            }
+
+            setupEventListeners() {
+                document.getElementById('showHintBtn').addEventListener('click', () => this.showHint());
+                document.getElementById('showGroupsBtn').addEventListener('click', () => this.toggleGroups());
+                document.getElementById('animateBtn').addEventListener('click', () => this.animateGrouping());
+                document.getElementById('resetBtn').addEventListener('click', () => this.resetVisualization());
+                document.getElementById('submitBtn').addEventListener('click', () => this.submitAnswer());
+                
+                document.getElementById('answerInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.submitAnswer();
+                    }
+                });
+            }
+
+            setupCanvas() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.canvas.width = rect.width * window.devicePixelRatio;
+                this.canvas.height = rect.height * window.devicePixelRatio;
+                this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            loadProblem(problemData) {
+                this.problemData = problemData;
+                this.showGroups = false;
+                this.isAnimating = false;
+                this.animationStep = 0;
+                
+                document.getElementById('problemStatement').textContent = problemData.problem_statement;
+                this.drawQuotativeModel();
+                this.showInfo();
+                this.showContext();
+            }
+
+            drawQuotativeModel() {
+                if (!this.problemData) return;
+
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const width = canvas.width / window.devicePixelRatio;
+                const height = canvas.height / window.devicePixelRatio;
+
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+
+                // Draw grid
+                MathVisualUtils.drawGrid(ctx, width, height, 20, '#00ff00', 0.1);
+
+                // Calculate layout parameters
+                const padding = 40;
+                const availableWidth = width - 2 * padding;
+                const availableHeight = height - 2 * padding;
+
+                const totalItems = this.problemData.total_amount;
+                const groupSize = this.problemData.group_size;
+                const numberOfGroups = this.problemData.number_of_groups;
+                const remainderCount = this.problemData.remainder_count;
+
+                // Calculate item size and spacing
+                const maxItemsPerRow = Math.ceil(Math.sqrt(totalItems));
+                const itemSize = Math.min(availableWidth / maxItemsPerRow, availableHeight / Math.ceil(totalItems / maxItemsPerRow)) * 0.8;
+                const itemSpacing = itemSize * 0.1;
+
+                let currentX = padding;
+                let currentY = padding;
+                let itemCount = 0;
+
+                // Draw items
+                for (let group = 0; group < numberOfGroups; group++) {
+                    // Draw group highlight if enabled
+                    if (this.showGroups) {
+                        this.drawGroupHighlight(currentX - itemSpacing, currentY - itemSpacing, 
+                            groupSize * (itemSize + itemSpacing), itemSize + itemSpacing, group);
+                    }
+
+                    // Draw items in this group
+                    for (let item = 0; item < groupSize; item++) {
+                        this.drawItem(currentX, currentY, itemSize, itemCount + 1);
+                        
+                        currentX += itemSize + itemSpacing;
+                        if (currentX + itemSize > width - padding) {
+                            currentX = padding;
+                            currentY += itemSize + itemSpacing;
+                        }
+                        itemCount++;
+                    }
+
+                    // Move to next group position
+                    if (group < numberOfGroups - 1) {
+                        currentX += itemSpacing * 2;
+                        if (currentX + itemSize > width - padding) {
+                            currentX = padding;
+                            currentY += itemSize + itemSpacing * 2;
+                        }
+                    }
+                }
+
+                // Draw remainder items
+                if (remainderCount > 0) {
+                    // Draw remainder highlight
+                    if (this.showGroups) {
+                        this.drawRemainderHighlight(currentX - itemSpacing, currentY - itemSpacing,
+                            remainderCount * (itemSize + itemSpacing), itemSize + itemSpacing);
+                    }
+
+                    for (let item = 0; item < remainderCount; item++) {
+                        this.drawItem(currentX, currentY, itemSize, itemCount + 1, true);
+                        
+                        currentX += itemSize + itemSpacing;
+                        if (currentX + itemSize > width - padding) {
+                            currentX = padding;
+                            currentY += itemSize + itemSpacing;
+                        }
+                        itemCount++;
+                    }
+                }
+
+                // Draw labels
+                this.drawLabels(width, height, numberOfGroups, groupSize, remainderCount);
+            }
+
+            drawItem(x, y, size, number, isRemainder = false) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                
+                // Draw item background
+                ctx.fillStyle = isRemainder ? '#ff0000' : '#00ff00';
+                ctx.fillRect(x, y, size, size);
+                
+                // Draw border
+                ctx.strokeStyle = isRemainder ? '#ff0000' : '#00ff00';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, size, size);
+                
+                // Draw item number
+                MathVisualUtils.drawGlowText(ctx, number.toString(), 
+                    x + size/2, y + size/2, size * 0.3, '#000000');
+                
+                ctx.restore();
+            }
+
+            drawGroupHighlight(x, y, width, height, groupNumber) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                ctx.strokeStyle = '#ffff00';
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.2)';
+                ctx.lineWidth = 3;
+                ctx.fillRect(x, y, width, height);
+                ctx.strokeRect(x, y, width, height);
+
+                // Draw group number
+                MathVisualUtils.drawGlowText(ctx, `Group ${groupNumber + 1}`, 
+                    x + width/2, y - 10, 12, '#ffff00');
+
+                ctx.restore();
+            }
+
+            drawRemainderHighlight(x, y, width, height) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                ctx.strokeStyle = '#ff0000';
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
+                ctx.lineWidth = 3;
+                ctx.fillRect(x, y, width, height);
+                ctx.strokeRect(x, y, width, height);
+
+                // Draw remainder label
+                MathVisualUtils.drawGlowText(ctx, 'Remainder', 
+                    x + width/2, y - 10, 12, '#ff0000');
+
+                ctx.restore();
+            }
+
+            drawLabels(width, height, numberOfGroups, groupSize, remainderCount) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                ctx.fillStyle = '#00ff00';
+                ctx.font = '14px Courier New, monospace';
+                ctx.textAlign = 'center';
+
+                // Draw summary labels
+                const summaryY = height - 20;
+                let summaryText = `${numberOfGroups} groups of ${groupSize}`;
+                if (remainderCount > 0) {
+                    summaryText += ` with ${remainderCount} remainder`;
+                }
+
+                MathVisualUtils.drawGlowText(ctx, summaryText, width/2, summaryY, 14);
+
+                ctx.restore();
+            }
+
+            toggleGroups() {
+                this.showGroups = !this.showGroups;
+                document.getElementById('showGroupsBtn').textContent = 
+                    this.showGroups ? 'Hide Groups' : 'Show Groups';
+                this.drawQuotativeModel();
+            }
+
+            animateGrouping() {
+                if (this.isAnimating) return;
+
+                this.isAnimating = true;
+                this.animationStep = 0;
+                document.getElementById('animateBtn').textContent = 'Animating...';
+                document.getElementById('animateBtn').disabled = true;
+
+                this.animateStep();
+            }
+
+            animateStep() {
+                if (this.animationStep >= this.problemData.number_of_groups) {
+                    this.isAnimating = false;
+                    document.getElementById('animateBtn').textContent = 'Animate Grouping';
+                    document.getElementById('animateBtn').disabled = false;
+                    this.drawQuotativeModel();
+                    return;
+                }
+
+                // Clear and redraw
+                this.drawQuotativeModel();
+
+                // Highlight current group being formed
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const width = canvas.width / window.devicePixelRatio;
+                const height = canvas.height / window.devicePixelRatio;
+                const padding = 40;
+                const availableWidth = width - 2 * padding;
+                const availableHeight = height - 2 * padding;
+
+                const totalItems = this.problemData.total_amount;
+                const groupSize = this.problemData.group_size;
+                const maxItemsPerRow = Math.ceil(Math.sqrt(totalItems));
+                const itemSize = Math.min(availableWidth / maxItemsPerRow, availableHeight / Math.ceil(totalItems / maxItemsPerRow)) * 0.8;
+                const itemSpacing = itemSize * 0.1;
+
+                let currentX = padding;
+                let currentY = padding;
+                let itemCount = 0;
+
+                // Find and highlight current group
+                for (let group = 0; group <= this.animationStep; group++) {
+                    if (group === this.animationStep) {
+                        // Highlight current group
+                        ctx.save();
+                        ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                        ctx.strokeStyle = '#ff0000';
+                        ctx.lineWidth = 4;
+                        ctx.fillRect(currentX - itemSpacing, currentY - itemSpacing, 
+                            groupSize * (itemSize + itemSpacing), itemSize + itemSpacing);
+                        ctx.strokeRect(currentX - itemSpacing, currentY - itemSpacing, 
+                            groupSize * (itemSize + itemSpacing), itemSize + itemSpacing);
+                        ctx.restore();
+                    }
+
+                    // Move to next group
+                    for (let item = 0; item < groupSize; item++) {
+                        currentX += itemSize + itemSpacing;
+                        if (currentX + itemSize > width - padding) {
+                            currentX = padding;
+                            currentY += itemSize + itemSpacing;
+                        }
+                        itemCount++;
+                    }
+
+                    if (group < this.problemData.number_of_groups - 1) {
+                        currentX += itemSpacing * 2;
+                        if (currentX + itemSize > width - padding) {
+                            currentX = padding;
+                            currentY += itemSize + itemSpacing * 2;
+                        }
+                    }
+                }
+
+                this.animationStep++;
+                setTimeout(() => this.animateStep(), 1500);
+            }
+
+            showHint() {
+                if (!this.problemData) return;
+
+                const hint = this.getHint();
+                MathVisualUtils.showFeedback(
+                    document.getElementById('feedbackContainer'),
+                    hint,
+                    'hint'
+                );
+            }
+
+            getHint() {
+                if (this.problemData.measurement_type === 'length') {
+                    return `Count how many ${this.problemData.group_size}-unit segments fit in ${this.problemData.total_amount} units`;
+                } else if (this.problemData.measurement_type === 'capacity') {
+                    return `Count how many ${this.problemData.group_size}-unit containers can be filled`;
+                } else if (this.problemData.measurement_type === 'groups') {
+                    return `Count how many complete groups of ${this.problemData.group_size} can be made`;
+                } else {
+                    return `Count how many $${this.problemData.group_size} items can be purchased`;
+                }
+            }
+
+            submitAnswer() {
+                const input = document.getElementById('answerInput');
+                const userAnswer = parseInt(input.value);
+
+                if (!MathVisualUtils.validateNumericInput(input.value)) {
+                    MathVisualUtils.showFeedback(
+                        document.getElementById('feedbackContainer'),
+                        'Please enter a valid number',
+                        'incorrect'
+                    );
+                    return;
+                }
+
+                const isCorrect = userAnswer === this.problemData.number_of_groups;
+                
+                if (isCorrect) {
+                    MathVisualUtils.showFeedback(
+                        document.getElementById('feedbackContainer'),
+                        'Correct! Well done!',
+                        'correct'
+                    );
+                    MathVisualUtils.createPulseEffect(document.getElementById('quotativeCanvas'));
+                } else {
+                    MathVisualUtils.showFeedback(
+                        document.getElementById('feedbackContainer'),
+                        `Incorrect. The answer is ${this.problemData.number_of_groups}`,
+                        'incorrect'
+                    );
+                }
+            }
+
+            showInfo() {
+                const infoContainer = document.getElementById('infoContainer');
+                infoContainer.innerHTML = `
+                    <div class="quotative-step"><strong>Measurement Type:</strong> ${this.problemData.measurement_type}</div>
+                    <div class="quotative-step"><strong>Total Amount:</strong> ${this.problemData.total_amount}</div>
+                    <div class="quotative-step"><strong>Group Size:</strong> ${this.problemData.group_size}</div>
+                    <div class="quotative-step"><strong>Number of Groups:</strong> ${this.problemData.number_of_groups}</div>
+                    <div class="quotative-step"><strong>Remainder:</strong> ${this.problemData.remainder_count}</div>
+                `;
+                infoContainer.style.display = 'block';
+            }
+
+            showContext() {
+                const contextContainer = document.getElementById('contextContainer');
+                const context = this.getContextDescription();
+                contextContainer.innerHTML = `<strong>Real-world context:</strong> ${context}`;
+                contextContainer.style.display = 'block';
+            }
+
+            getContextDescription() {
+                if (this.problemData.measurement_type === 'length') {
+                    return `A rope is ${this.problemData.total_amount} inches long. How many ${this.problemData.group_size}-inch pieces can be cut from it?`;
+                } else if (this.problemData.measurement_type === 'capacity') {
+                    return `You have ${this.problemData.total_amount} cups of water. How many ${this.problemData.group_size}-cup containers can you fill?`;
+                } else if (this.problemData.measurement_type === 'groups') {
+                    return `You have ${this.problemData.total_amount} marbles. How many groups of ${this.problemData.group_size} marbles can you make?`;
+                } else {
+                    return `You have $${this.problemData.total_amount}. How many items costing $${this.problemData.group_size} each can you buy?`;
+                }
+            }
+
+            resetVisualization() {
+                this.showGroups = false;
+                this.isAnimating = false;
+                this.animationStep = 0;
+                document.getElementById('showGroupsBtn').textContent = 'Show Groups';
+                document.getElementById('animateBtn').textContent = 'Animate Grouping';
+                document.getElementById('animateBtn').disabled = false;
+                document.getElementById('answerInput').value = '';
+                
+                // Clear feedback
+                const feedbackContainer = document.getElementById('feedbackContainer');
+                feedbackContainer.innerHTML = '';
+                
+                this.drawQuotativeModel();
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.quotativeVisualizer = new QuotativeVisualizer();
+            
+            // Example problem data (this would come from the Python backend)
+            const exampleProblem = {
+                type: "quotative",
+                measurement_type: "groups",
+                total_amount: 17,
+                group_size: 4,
+                number_of_groups: 4,
+                groups: [[1,2,3,4], [5,6,7,8], [9,10,11,12], [13,14,15,16]],
+                remainder_items: [17],
+                remainder_count: 1,
+                units: { total_unit: "items", group_unit: "items" },
+                show_units: true,
+                show_remainder: true,
+                highlight_groups: true,
+                show_labels: true,
+                problem_statement: "How many groups of 4 can be made from 17 items?"
+            };
+            
+            window.quotativeVisualizer.loadProblem(exampleProblem);
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (window.quotativeVisualizer) {
+                window.quotativeVisualizer.setupCanvas();
+                window.quotativeVisualizer.drawQuotativeModel();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Blaster Visual Modules Demo</title>
+    <link rel="stylesheet" href="shared-styles.css">
+    <style>
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .demo-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .demo-title {
+            font-size: 2.5em;
+            color: #00ff00;
+            text-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .demo-subtitle {
+            font-size: 1.2em;
+            color: #00ff00;
+            opacity: 0.8;
+        }
+
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .module-card {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            border: 2px solid #00ff00;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 32px rgba(0, 255, 0, 0.1);
+        }
+
+        .module-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 255, 0, 0.2);
+        }
+
+        .module-title {
+            font-size: 1.5em;
+            color: #00ff00;
+            margin-bottom: 10px;
+        }
+
+        .module-description {
+            color: #00ff00;
+            opacity: 0.8;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+
+        .module-btn {
+            background: linear-gradient(45deg, #00ff00, #00cc00);
+            border: none;
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .module-btn:hover {
+            background: linear-gradient(45deg, #00cc00, #00ff00);
+            transform: translateY(-2px);
+        }
+
+        .integration-guide {
+            background: rgba(0, 255, 0, 0.1);
+            border: 2px solid #00ff00;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        .integration-title {
+            font-size: 1.8em;
+            color: #00ff00;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .integration-section {
+            margin-bottom: 20px;
+        }
+
+        .integration-section h3 {
+            color: #00ff00;
+            margin-bottom: 10px;
+        }
+
+        .integration-section p {
+            color: #00ff00;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #00ff00;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            color: #00ff00;
+            overflow-x: auto;
+        }
+
+        .features-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .features-list li {
+            color: #00ff00;
+            margin: 8px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .features-list li::before {
+            content: "✓";
+            color: #00ff00;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="demo-header">
+            <h1 class="demo-title">Math Blaster Visual Modules</h1>
+            <p class="demo-subtitle">Interactive HTML/CSS/JavaScript components for visual math education</p>
+        </div>
+
+        <div class="modules-grid">
+            <div class="module-card">
+                <h2 class="module-title">Number Line Module</h2>
+                <p class="module-description">
+                    Visual representations of addition and subtraction using interactive number lines. 
+                    Features animated movement, tick marks, and step-by-step guidance.
+                </p>
+                <a href="numberline.html" class="module-btn">Try Number Line</a>
+            </div>
+
+            <div class="module-card">
+                <h2 class="module-title">Arrays Module</h2>
+                <p class="module-description">
+                    Multiplication and division using rectangular arrays. 
+                    Includes group highlighting, counting animations, and alternative representations.
+                </p>
+                <a href="arrays.html" class="module-btn">Try Arrays</a>
+            </div>
+
+            <div class="module-card">
+                <h2 class="module-title">Area Models Module</h2>
+                <p class="module-description">
+                    Multiplication using area models with decomposition strategies. 
+                    Features partial products, distributive property, and step-by-step breakdowns.
+                </p>
+                <a href="area_models.html" class="module-btn">Try Area Models</a>
+            </div>
+
+            <div class="module-card">
+                <h2 class="module-title">Quotative Module</h2>
+                <p class="module-description">
+                    Division using quotative (measurement) models. 
+                    Supports multiple contexts: length, capacity, groups, and money with remainder handling.
+                </p>
+                <a href="quotative.html" class="module-btn">Try Quotative</a>
+            </div>
+        </div>
+
+        <div class="integration-guide">
+            <h2 class="integration-title">Integration Guide</h2>
+            
+            <div class="integration-section">
+                <h3>Quick Start</h3>
+                <p>Each module is a self-contained HTML file that can be easily integrated into your Math Blaster application:</p>
+                <div class="code-block">
+// Include shared utilities
+&lt;link rel="stylesheet" href="shared-styles.css"&gt;
+&lt;script src="shared-utils.js"&gt;&lt;/script&gt;
+
+// Include specific module
+&lt;script&gt;
+    const visualizer = new NumberLineVisualizer('canvasId');
+    visualizer.loadProblem(problemData);
+&lt;/script&gt;
+                </div>
+            </div>
+
+            <div class="integration-section">
+                <h3>Data Format</h3>
+                <p>All modules expect problem data in a standardized format from the Python backend:</p>
+                <div class="code-block">
+{
+    "type": "number_line|array|area_model|quotative",
+    "operation": "addition|subtraction|multiplication|division",
+    "problem_statement": "5 + 3 = ?",
+    "visual_data": { /* module-specific data */ },
+    "answer": 8
+}
+                </div>
+            </div>
+
+            <div class="integration-section">
+                <h3>Key Features</h3>
+                <ul class="features-list">
+                    <li>Responsive design that works on all screen sizes</li>
+                    <li>Interactive animations and visual feedback</li>
+                    <li>Answer validation with immediate feedback</li>
+                    <li>Hint systems and step-by-step guidance</li>
+                    <li>Consistent Math Blaster visual theme</li>
+                    <li>Modular architecture for easy customization</li>
+                    <li>Canvas-based rendering for smooth graphics</li>
+                    <li>Accessibility features and keyboard navigation</li>
+                </ul>
+            </div>
+
+            <div class="integration-section">
+                <h3>Customization</h3>
+                <p>All modules use CSS custom properties and can be easily themed:</p>
+                <div class="code-block">
+:root {
+    --primary-color: #00ff00;
+    --secondary-color: #00cc00;
+    --background-color: #0a0a0a;
+    --text-color: #00ff00;
+}
+                </div>
+            </div>
+
+            <div class="integration-section">
+                <h3>Backend Integration</h3>
+                <p>Connect with the Python visual modules to generate problem data:</p>
+                <div class="code-block">
+# Python backend
+from visual_modules import NumberLineModule
+module = NumberLineModule()
+problem = module.generate_addition_problem()
+visual_data = module.get_visual_description(problem)
+
+# Send to frontend
+return json.dumps(visual_data)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.module-card');
+            
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    card.style.borderColor = '#ffff00';
+                });
+                
+                card.addEventListener('mouseleave', () => {
+                    card.style.borderColor = '#00ff00';
+                });
+            });
+
+            // Add click tracking for analytics
+            const buttons = document.querySelectorAll('.module-btn');
+            buttons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    console.log(`Opening module: ${e.target.textContent}`);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

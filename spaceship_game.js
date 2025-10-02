@@ -1119,8 +1119,9 @@ class SpaceshipGame {
         
         if (isCorrect) {
             this.mathMode.correctCount++;
-            this.addAmmunition();
             
+            // Add ammunition
+            this.addAmmunition();
             // Show reward feedback
             this.showMathFeedback(`+${rewardAmount} ammo!`, '#00ff00');
         } else {
@@ -1269,6 +1270,1248 @@ class SpaceshipGame {
         const accuracy = this.mathMode.totalCount > 0 ? 
             Math.round((this.mathMode.correctCount / this.mathMode.totalCount) * 100) : 0;
         document.getElementById('accuracy').textContent = accuracy + '%';
+    }
+    
+    createVisualDataFromProblem(problem) {
+        console.log('createVisualDataFromProblem called with:', problem);
+        const question = problem.question;
+        const answer = problem.answer;
+        
+        console.log('Question:', question, 'Answer:', answer);
+        
+        // Parse question to determine visual type
+        if (question.includes('×') || question.includes('*')) {
+            console.log('Detected multiplication problem');
+            const parts = question.split(/[×*]/).map(x => parseInt(x.trim()));
+            if (parts.length === 2) {
+                const [a, b] = parts;
+                const visualData = {
+                    type: 'area_model',
+                    strategy: 'partial_products',
+                    dimensions: { length: a, width: b },
+                    total_area: answer,
+                    coordinates: this.generateAreaModelCoordinates(a, b),
+                    partial_products: this.generatePartialProducts(a, b),
+                    show_grid: true,
+                    show_partial_products: true,
+                    show_labels: true,
+                    highlight_regions: true,
+                    problem_statement: `${a} × ${b} = ?`
+                };
+                console.log('Created area model visual data:', visualData);
+                return visualData;
+            }
+        } else if (question.includes('+')) {
+            console.log('Detected addition problem');
+            const [a, b] = question.split(' + ').map(x => parseInt(x));
+            const visualData = {
+                type: 'number_line',
+                operation: 'addition',
+                start_value: a,
+                change_value: b,
+                result: answer,
+                problem_statement: question + ' = ?'
+            };
+            console.log('Created number line visual data:', visualData);
+            return visualData;
+        } else if (question.includes('-')) {
+            console.log('Detected subtraction problem');
+            const [a, b] = question.split(' - ').map(x => parseInt(x));
+            const visualData = {
+                type: 'number_line',
+                operation: 'subtraction',
+                start_value: a,
+                change_value: b,
+                result: answer,
+                problem_statement: question + ' = ?'
+            };
+            console.log('Created number line visual data:', visualData);
+            return visualData;
+        } else if (question.includes('÷')) {
+            console.log('Detected division problem');
+            const [a, b] = question.split(' ÷ ').map(x => parseInt(x));
+            const visualData = {
+                type: 'quotative',
+                total_amount: a,
+                group_size: b,
+                number_of_groups: answer,
+                remainder_count: a % b,
+                problem_statement: `How many groups of ${b} can be made from ${a} items?`
+            };
+            console.log('Created quotative visual data:', visualData);
+            return visualData;
+        }
+        
+        console.log('No matching problem type found, returning null');
+        return null;
+    }
+    
+    // Manual test function to force visual loading
+    testVisualLoading() {
+        console.log('Testing visual loading manually...');
+        
+        // Create a test problem
+        const testProblem = {
+            question: "7 + 1",
+            answer: 8
+        };
+        
+        console.log('Test problem:', testProblem);
+        
+        const visualData = this.createVisualDataFromProblem(testProblem);
+        console.log('Test visual data:', visualData);
+        
+        if (visualData) {
+            console.log('Rendering test visual...');
+            this.renderVisual(visualData);
+        } else {
+            console.log('Failed to create visual data');
+        }
+    }
+    
+    generateAreaModelCoordinates(length, width) {
+        const coordinates = [];
+        for (let i = 0; i < length; i++) {
+            for (let j = 0; j < width; j++) {
+                coordinates.push([i, j]);
+            }
+        }
+        return coordinates;
+    }
+    
+    generatePartialProducts(length, width) {
+        const partials = [];
+        
+        // Break down into tens and ones
+        const lengthTens = Math.floor(length / 10) * 10;
+        const lengthOnes = length % 10;
+        const widthTens = Math.floor(width / 10) * 10;
+        const widthOnes = width % 10;
+        
+        if (lengthTens > 0 && widthTens > 0) {
+            partials.push({
+                region: "tens_tens",
+                length: lengthTens,
+                width: widthTens,
+                area: lengthTens * widthTens,
+                coordinates: this.generateAreaModelCoordinates(lengthTens, widthTens)
+            });
+        }
+        
+        if (lengthTens > 0 && widthOnes > 0) {
+            partials.push({
+                region: "tens_ones",
+                length: lengthTens,
+                width: widthOnes,
+                area: lengthTens * widthOnes,
+                coordinates: this.generateAreaModelCoordinates(lengthTens, widthOnes)
+            });
+        }
+        
+        if (lengthOnes > 0 && widthTens > 0) {
+            partials.push({
+                region: "ones_tens",
+                length: lengthOnes,
+                width: widthTens,
+                area: lengthOnes * widthTens,
+                coordinates: this.generateAreaModelCoordinates(lengthOnes, widthTens)
+            });
+        }
+        
+        if (lengthOnes > 0 && widthOnes > 0) {
+            partials.push({
+                region: "ones_ones",
+                length: lengthOnes,
+                width: widthOnes,
+                area: lengthOnes * widthOnes,
+                coordinates: this.generateAreaModelCoordinates(lengthOnes, widthOnes)
+            });
+        }
+        
+        return partials;
+    }
+    
+    renderVisual(visualData) {
+        console.log('renderVisual called with:', visualData);
+        const container = document.getElementById('visualContainer');
+        console.log('Visual container found:', container);
+        
+        if (!container) {
+            console.error('Visual container not found!');
+            return;
+        }
+        
+        container.innerHTML = '';
+        
+        // Remove placeholder if it exists
+        const placeholder = document.getElementById('visualPlaceholder');
+        if (placeholder) {
+            placeholder.remove();
+        }
+        
+        console.log('Rendering visual with data:', visualData);
+        
+        // Create native visual component based on type
+        if (visualData.type === 'area_model') {
+            this.createAreaModelVisualizer(container, visualData);
+        } else if (visualData.type === 'number_line') {
+            this.createNumberLineVisualizer(container, visualData);
+        } else if (visualData.type === 'quotative') {
+            this.createQuotativeVisualizer(container, visualData);
+        } else {
+            this.createSimpleVisualizer(container, visualData);
+        }
+        
+        console.log('Visual rendering complete');
+    }
+    
+    createAreaModelVisualizer(container, visualData) {
+        console.log('Creating area model visualizer');
+        
+        // Create the visual container structure
+        const visualDiv = document.createElement('div');
+        visualDiv.className = 'math-visual-container';
+        visualDiv.style.width = '100%';
+        visualDiv.style.height = '100%';
+        
+        // Problem statement
+        const problemStatement = document.createElement('div');
+        problemStatement.className = 'math-problem-statement';
+        problemStatement.textContent = visualData.problem_statement;
+        visualDiv.appendChild(problemStatement);
+        
+        // Canvas container
+        const canvasContainer = document.createElement('div');
+        canvasContainer.style.position = 'relative';
+        canvasContainer.style.width = '100%';
+        canvasContainer.style.maxWidth = '500px';
+        
+        // Create canvas
+        const canvas = MathVisualUtils.createCanvas(500, 350, 'math-visual-canvas');
+        canvas.style.width = '100%';
+        canvas.style.height = '350px';
+        canvasContainer.appendChild(canvas);
+        visualDiv.appendChild(canvasContainer);
+        
+        // Controls
+        const controlsDiv = document.createElement('div');
+        controlsDiv.className = 'math-controls';
+        
+        const hintBtn = MathVisualUtils.createButton('Show Hint', () => this.showAreaModelHint(visualData));
+        const partialBtn = MathVisualUtils.createButton('Show Partial Products', () => this.togglePartialProducts(canvas, visualData));
+        const animateBtn = MathVisualUtils.createButton('Animate', () => this.animateAreaModel(canvas, visualData));
+        const resetBtn = MathVisualUtils.createButton('Reset', () => this.renderAreaModel(canvas, visualData));
+        
+        controlsDiv.appendChild(hintBtn);
+        controlsDiv.appendChild(partialBtn);
+        controlsDiv.appendChild(animateBtn);
+        controlsDiv.appendChild(resetBtn);
+        visualDiv.appendChild(controlsDiv);
+
+        // Inline feedback/hint container
+        const feedbackDivAM = document.createElement('div');
+        feedbackDivAM.style.marginTop = '10px';
+        visualDiv.appendChild(feedbackDivAM);
+        
+        // Info container
+        const infoDiv = document.createElement('div');
+        infoDiv.style.marginTop = '15px';
+        infoDiv.style.padding = '10px';
+        infoDiv.style.background = 'rgba(0, 255, 0, 0.1)';
+        infoDiv.style.borderRadius = '6px';
+        infoDiv.style.border = '1px solid #00ff00';
+        infoDiv.innerHTML = `
+            <div><strong>Strategy:</strong> ${visualData.strategy}</div>
+            <div><strong>Dimensions:</strong> ${visualData.dimensions.length} × ${visualData.dimensions.width}</div>
+            <div><strong>Total Area:</strong> ${visualData.total_area}</div>
+        `;
+        visualDiv.appendChild(infoDiv);
+        
+        container.appendChild(visualDiv);
+        
+        // Store current visualizer
+        this.currentVisualizer = {
+            canvas: canvas,
+            visualData: visualData,
+            container: visualDiv,
+            feedbackDiv: feedbackDivAM
+        };
+        
+        // Render the area model
+        this.renderAreaModel(canvas, visualData);
+    }
+    
+    renderAreaModel(canvas, data) {
+        const ctx = MathVisualUtils.getCanvasContext(canvas);
+        const width = canvas.width;
+        const height = canvas.height;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+        
+        // Draw background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillRect(0, 0, width, height);
+        
+        // Draw area model
+        const padding = 40;
+        const modelWidth = width - 2 * padding;
+        const modelHeight = height - 2 * padding;
+        
+        const length = data.dimensions.length;
+        const width_dim = data.dimensions.width;
+        
+        // Scale to fit canvas
+        const maxDimension = Math.max(length, width_dim);
+        const scale = Math.min(modelWidth / maxDimension, modelHeight / maxDimension) * 0.8;
+        
+        const scaledLength = length * scale;
+        const scaledWidth = width_dim * scale;
+        
+        const startX = padding + (modelWidth - scaledLength) / 2;
+        const startY = padding + (modelHeight - scaledWidth) / 2;
+        
+        // Draw main rectangle
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(startX, startY, scaledLength, scaledWidth);
+        
+        // Draw grid lines inside rectangle
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.5;
+        
+        const cellWidth = scaledLength / length;
+        const cellHeight = scaledWidth / width_dim;
+        
+        // Vertical lines
+        for (let i = 1; i < length; i++) {
+            const x = startX + i * cellWidth;
+            ctx.beginPath();
+            ctx.moveTo(x, startY);
+            ctx.lineTo(x, startY + scaledWidth);
+            ctx.stroke();
+        }
+        
+        // Horizontal lines
+        for (let i = 1; i < width_dim; i++) {
+            const y = startY + i * cellHeight;
+            ctx.beginPath();
+            ctx.moveTo(startX, y);
+            ctx.lineTo(startX + scaledLength, y);
+            ctx.stroke();
+        }
+        
+        ctx.globalAlpha = 1;
+        
+        // Draw labels
+        MathVisualUtils.drawGlowText(ctx, `${length}`, startX + scaledLength / 2, startY - 20, 14);
+        MathVisualUtils.drawGlowText(ctx, `${width_dim}`, startX - 20, startY + scaledWidth / 2, 14);
+        MathVisualUtils.drawGlowText(ctx, `Area = ${length} × ${width_dim} = ${data.total_area}`, 
+            startX + scaledLength / 2, startY + scaledWidth + 20, 14);
+    }
+    
+    showAreaModelHint(data) {
+        const hint = `Find the area of a rectangle that is ${data.dimensions.length} units long and ${data.dimensions.width} units wide`;
+        const target = this.currentVisualizer?.feedbackDiv || this.currentVisualizer?.container || document.getElementById('visualContainer');
+        if (target && typeof MathVisualUtils !== 'undefined') {
+            MathVisualUtils.showFeedback(target, hint, 'hint');
+        }
+    }
+    
+    togglePartialProducts(canvas, data) {
+        // This would show/hide partial products - simplified for now
+        console.log('Toggle partial products');
+        this.renderAreaModel(canvas, data);
+    }
+    
+    animateAreaModel(canvas, data) {
+        let frame = 0;
+        const animate = () => {
+            this.renderAreaModel(canvas, data);
+            
+            // Add pulsing effect
+            const ctx = canvas.getContext('2d');
+            const alpha = 0.5 + 0.5 * Math.sin(frame * 0.1);
+            ctx.fillStyle = `rgba(255, 255, 0, ${alpha})`;
+            ctx.font = '16px Courier New, monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('Animating...', canvas.width/2, canvas.height - 10);
+            
+            frame++;
+            if (frame < 100) {
+                requestAnimationFrame(animate);
+            }
+        };
+        
+        animate();
+    }
+    
+    createNumberLineVisualizer(container, visualData) {
+        console.log('Creating number line visualizer');
+        
+        const visualDiv = document.createElement('div');
+        visualDiv.className = 'math-visual-container';
+        visualDiv.style.width = '100%';
+        visualDiv.style.height = '100%';
+        
+        // Problem statement
+        const problemStatement = document.createElement('div');
+        problemStatement.className = 'math-problem-statement';
+        problemStatement.textContent = visualData.problem_statement;
+        visualDiv.appendChild(problemStatement);
+        
+        // Canvas
+        const canvas = MathVisualUtils.createCanvas(500, 200, 'math-visual-canvas');
+        canvas.style.width = '100%';
+        canvas.style.height = '200px';
+        visualDiv.appendChild(canvas);
+        
+        // Controls
+        const controlsDiv = document.createElement('div');
+        controlsDiv.className = 'math-controls';
+        
+        const hintBtn = MathVisualUtils.createButton('Show Hint', () => this.showNumberLineHint(visualData));
+        const animateBtn = MathVisualUtils.createButton('Animate', () => this.animateNumberLine(canvas, visualData));
+        
+        controlsDiv.appendChild(hintBtn);
+        controlsDiv.appendChild(animateBtn);
+        visualDiv.appendChild(controlsDiv);
+
+        // Inline feedback/hint container
+        const feedbackDivNL = document.createElement('div');
+        feedbackDivNL.style.marginTop = '10px';
+        visualDiv.appendChild(feedbackDivNL);
+        
+        container.appendChild(visualDiv);
+        
+        // Store current visualizer
+        this.currentVisualizer = {
+            canvas: canvas,
+            visualData: visualData,
+            container: visualDiv,
+            feedbackDiv: feedbackDivNL
+        };
+        
+        // Render the number line
+        this.renderNumberLine(canvas, visualData);
+    }
+    
+    renderNumberLine(canvas, data) {
+        const ctx = MathVisualUtils.getCanvasContext(canvas);
+        const width = canvas.width;
+        const height = canvas.height;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+        
+        // Draw background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillRect(0, 0, width, height);
+        
+        // Draw number line
+        const padding = 50;
+        const lineY = height / 2;
+        const lineStartX = padding;
+        const lineEndX = width - padding;
+        
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(lineStartX, lineY);
+        ctx.lineTo(lineEndX, lineY);
+        ctx.stroke();
+        
+        // Draw numbers and ticks
+        const maxValue = Math.max(data.start_value, data.result);
+        const step = (lineEndX - lineStartX) / maxValue;
+        
+        ctx.fillStyle = '#00ff00';
+        ctx.font = '14px Courier New, monospace';
+        ctx.textAlign = 'center';
+        
+        for (let i = 0; i <= maxValue; i += Math.max(1, Math.floor(maxValue / 10))) {
+            const x = lineStartX + i * step;
+            
+            // Draw tick
+            ctx.beginPath();
+            ctx.moveTo(x, lineY - 10);
+            ctx.lineTo(x, lineY + 10);
+            ctx.stroke();
+            
+            // Draw number
+            ctx.fillText(i.toString(), x, lineY + 25);
+        }
+        
+        // Draw start position
+        const startX = lineStartX + data.start_value * step;
+        ctx.fillStyle = '#ffff00';
+        ctx.beginPath();
+        ctx.arc(startX, lineY, 8, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillText('Start', startX, lineY - 20);
+        
+        // Draw result position
+        const resultX = lineStartX + data.result * step;
+        ctx.fillStyle = '#ff0000';
+        ctx.beginPath();
+        ctx.arc(resultX, lineY, 8, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillText('Result', resultX, lineY - 20);
+        
+        // Draw operation
+        ctx.fillStyle = '#00ff00';
+        ctx.font = '16px Courier New, monospace';
+        ctx.fillText(`${data.start_value} ${data.operation === 'addition' ? '+' : '-'} ${data.change_value} = ${data.result}`, 
+            width / 2, height - 20);
+    }
+    
+    showNumberLineHint(data) {
+        const hint = data.operation === 'addition' 
+            ? `Start at ${data.start_value} and move ${data.change_value} steps to the right`
+            : `Start at ${data.start_value} and move ${data.change_value} steps to the left`;
+        const target = this.currentVisualizer?.feedbackDiv || this.currentVisualizer?.container || document.getElementById('visualContainer');
+        if (target && typeof MathVisualUtils !== 'undefined') {
+            MathVisualUtils.showFeedback(target, hint, 'hint');
+        }
+    }
+    
+    animateNumberLine(canvas, data) {
+        let frame = 0;
+        const animate = () => {
+            this.renderNumberLine(canvas, data);
+            
+            // Add pulsing effect
+            const ctx = canvas.getContext('2d');
+            const alpha = 0.5 + 0.5 * Math.sin(frame * 0.1);
+            ctx.fillStyle = `rgba(255, 255, 0, ${alpha})`;
+            ctx.font = '16px Courier New, monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('Animating...', canvas.width/2, canvas.height - 10);
+            
+            frame++;
+            if (frame < 100) {
+                requestAnimationFrame(animate);
+            }
+        };
+        
+        animate();
+    }
+    
+    createQuotativeVisualizer(container, visualData) {
+        console.log('Creating quotative visualizer');
+        
+        const visualDiv = document.createElement('div');
+        visualDiv.className = 'math-visual-container';
+        visualDiv.style.width = '100%';
+        visualDiv.style.height = '100%';
+        
+        // Problem statement
+        const problemStatement = document.createElement('div');
+        problemStatement.className = 'math-problem-statement';
+        problemStatement.textContent = visualData.problem_statement;
+        visualDiv.appendChild(problemStatement);
+        
+        // Canvas
+        const canvas = MathVisualUtils.createCanvas(500, 300, 'math-visual-canvas');
+        canvas.style.width = '100%';
+        canvas.style.height = '300px';
+        visualDiv.appendChild(canvas);
+        
+        container.appendChild(visualDiv);
+        
+        // Store current visualizer
+        this.currentVisualizer = {
+            canvas: canvas,
+            visualData: visualData,
+            container: visualDiv
+        };
+        
+        // Render the quotative visualization
+        this.renderQuotative(canvas, visualData);
+    }
+    
+    renderQuotative(canvas, data) {
+        const ctx = MathVisualUtils.getCanvasContext(canvas);
+        const width = canvas.width;
+        const height = canvas.height;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+        
+        // Draw background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillRect(0, 0, width, height);
+        
+        // Draw groups
+        const groupSize = data.group_size;
+        const numberOfGroups = data.number_of_groups;
+        const totalItems = data.total_amount;
+        
+        const padding = 40;
+        const itemSize = 20;
+        const spacing = 10;
+        
+        let itemCount = 0;
+        let groupCount = 0;
+        
+        for (let group = 0; group < numberOfGroups; group++) {
+            const groupX = padding + (group % 5) * (itemSize * groupSize + spacing);
+            const groupY = padding + Math.floor(group / 5) * (itemSize + spacing);
+            
+            // Draw group rectangle
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(groupX, groupY, itemSize * groupSize, itemSize);
+            
+            // Draw items in group
+            for (let item = 0; item < groupSize && itemCount < totalItems; item++) {
+                const itemX = groupX + item * itemSize;
+                const itemY = groupY;
+                
+                ctx.fillStyle = '#00ff00';
+                ctx.fillRect(itemX + 2, itemY + 2, itemSize - 4, itemSize - 4);
+                
+                itemCount++;
+            }
+            
+            groupCount++;
+        }
+        
+        // Draw remainder items
+        if (data.remainder_count > 0) {
+            const remainderX = padding;
+            const remainderY = padding + Math.ceil(numberOfGroups / 5) * (itemSize + spacing);
+            
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(remainderX, remainderY, itemSize * data.remainder_count, itemSize);
+            
+            for (let item = 0; item < data.remainder_count; item++) {
+                const itemX = remainderX + item * itemSize;
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(itemX + 2, remainderY + 2, itemSize - 4, itemSize - 4);
+            }
+        }
+        
+        // Draw summary
+        ctx.fillStyle = '#00ff00';
+        ctx.font = '14px Courier New, monospace';
+        ctx.textAlign = 'center';
+        let summary = `${numberOfGroups} groups of ${groupSize}`;
+        if (data.remainder_count > 0) {
+            summary += ` with ${data.remainder_count} remainder`;
+        }
+        ctx.fillText(summary, width/2, height - 10);
+    }
+    
+    createSimpleVisualizer(container, visualData) {
+        console.log('Creating simple visualizer');
+        
+        const visualDiv = document.createElement('div');
+        visualDiv.className = 'math-visual-container';
+        visualDiv.style.width = '100%';
+        visualDiv.style.height = '100%';
+        
+        // Problem statement
+        const problemStatement = document.createElement('div');
+        problemStatement.className = 'math-problem-statement';
+        problemStatement.textContent = visualData.problem_statement || 'Visual Problem';
+        visualDiv.appendChild(problemStatement);
+        
+        // Simple text display
+        const infoDiv = document.createElement('div');
+        infoDiv.style.padding = '20px';
+        infoDiv.style.textAlign = 'center';
+        infoDiv.style.color = '#00ff00';
+        infoDiv.innerHTML = `
+            <div style="font-size: 1.2em; margin-bottom: 10px;">Type: ${visualData.type}</div>
+            <div style="font-size: 1.5em; font-weight: bold;">Answer: ${visualData.total_area || visualData.result || 'Unknown'}</div>
+        `;
+        visualDiv.appendChild(infoDiv);
+        
+        container.appendChild(visualDiv);
+        
+        // Store current visualizer
+        this.currentVisualizer = {
+            visualData: visualData,
+            container: visualDiv
+        };
+    }
+    
+    // Test function to verify visual setup
+    testVisualSetup() {
+        console.log('Testing visual setup...');
+        
+        const visualArea = document.getElementById('visualLearningArea');
+        const container = document.getElementById('visualContainer');
+        const placeholder = document.getElementById('visualPlaceholder');
+        
+        console.log('Visual area:', visualArea);
+        console.log('Visual container:', container);
+        console.log('Placeholder:', placeholder);
+        
+        if (visualArea) {
+            console.log('Visual area display:', visualArea.style.display);
+            console.log('Visual area computed style:', window.getComputedStyle(visualArea).display);
+        }
+        
+        if (container) {
+            console.log('Container dimensions:', {
+                width: container.offsetWidth,
+                height: container.offsetHeight,
+                clientWidth: container.clientWidth,
+                clientHeight: container.clientHeight
+            });
+        }
+        
+        // Test creating a simple visual
+        if (container) {
+            container.innerHTML = '<div style="color: #00ff00; padding: 20px; text-align: center;">TEST VISUAL - If you see this, the container is working!</div>';
+        }
+    }
+    
+    renderAreaModel(ctx, data) {
+        const width = ctx.canvas.width;
+        const height = ctx.canvas.height;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+        
+        // Draw background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillRect(0, 0, width, height);
+        
+        // Draw area model
+        const padding = 40;
+        const modelWidth = width - 2 * padding;
+        const modelHeight = height - 2 * padding;
+        
+        const length = data.dimensions.length;
+        const width_dim = data.dimensions.width;
+        
+        // Scale to fit canvas
+        const maxDimension = Math.max(length, width_dim);
+        const scale = Math.min(modelWidth / maxDimension, modelHeight / maxDimension) * 0.8;
+        
+        const scaledLength = length * scale;
+        const scaledWidth = width_dim * scale;
+        
+        const startX = padding + (modelWidth - scaledLength) / 2;
+        const startY = padding + (modelHeight - scaledWidth) / 2;
+        
+        // Draw main rectangle
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(startX, startY, scaledLength, scaledWidth);
+        
+        // Draw grid lines inside rectangle
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.5;
+        
+        const cellWidth = scaledLength / length;
+        const cellHeight = scaledWidth / width_dim;
+        
+        // Vertical lines
+        for (let i = 1; i < length; i++) {
+            const x = startX + i * cellWidth;
+            ctx.beginPath();
+            ctx.moveTo(x, startY);
+            ctx.lineTo(x, startY + scaledWidth);
+            ctx.stroke();
+        }
+        
+        // Horizontal lines
+        for (let i = 1; i < width_dim; i++) {
+            const y = startY + i * cellHeight;
+            ctx.beginPath();
+            ctx.moveTo(startX, y);
+            ctx.lineTo(startX + scaledLength, y);
+            ctx.stroke();
+        }
+        
+        ctx.globalAlpha = 1;
+        
+        // Draw labels
+        ctx.fillStyle = '#00ff00';
+        ctx.font = '14px Courier New, monospace';
+        ctx.textAlign = 'center';
+        
+        const centerX = startX + scaledLength / 2;
+        const centerY = startY + scaledWidth / 2;
+        
+        ctx.fillText(`${length}`, centerX, startY - 20);
+        ctx.fillText(`${width_dim}`, startX - 20, centerY);
+        ctx.fillText(`Area = ${length} × ${width_dim} = ${data.total_area}`, centerX, startY + scaledWidth + 20);
+    }
+    
+    renderSimpleVisual(ctx, data) {
+        const width = ctx.canvas.width;
+        const height = ctx.canvas.height;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+        
+        // Draw background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillRect(0, 0, width, height);
+        
+        // Draw simple text representation
+        ctx.fillStyle = '#00ff00';
+        ctx.font = '16px Courier New, monospace';
+        ctx.textAlign = 'center';
+        
+        ctx.fillText(data.problem_statement || 'Visual Problem', width/2, height/2 - 20);
+        ctx.fillText(`Type: ${data.type}`, width/2, height/2);
+        ctx.fillText(`Answer: ${data.total_area || data.result || 'Unknown'}`, width/2, height/2 + 20);
+    }
+    
+    passDataToVisualModule(iframe, visualData) {
+        try {
+            // Try to access the iframe's content and pass data
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            if (iframeDoc && iframeDoc.readyState === 'complete') {
+                // Pass data to the visual module
+                iframe.contentWindow.postMessage({
+                    type: 'loadProblem',
+                    data: visualData
+                }, '*');
+                console.log('Data passed to visual module:', visualData);
+            } else {
+                console.log('Iframe not ready yet, retrying...');
+                // Retry after a short delay
+                setTimeout(() => {
+                    this.passDataToVisualModule(iframe, visualData);
+                }, 100);
+            }
+        } catch (error) {
+            console.log('Could not pass data to visual module:', error);
+            // Fallback: show a message in the container
+            const container = document.getElementById('visualContainer');
+            container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 280px; color: #00ff00; font-size: 16px;">Visual module loaded: ' + visualData.type + '</div>';
+        }
+    }
+    
+    renderNumberLine(canvas, data) {
+        const ctx = MathVisualUtils.getCanvasContext(canvas);
+        const width = canvas.width;
+        const height = canvas.height;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+        
+        // Draw number line
+        const padding = 40;
+        const lineY = height / 2;
+        const lineStartX = padding;
+        const lineEndX = width - padding;
+        
+        // Calculate scale
+        const minVal = Math.min(data.start_value, data.result) - 2;
+        const maxVal = Math.max(data.start_value, data.result) + 2;
+        const range = maxVal - minVal;
+        const scale = (lineEndX - lineStartX) / range;
+        
+        // Draw line
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(lineStartX, lineY);
+        ctx.lineTo(lineEndX, lineY);
+        ctx.stroke();
+        
+        // Draw ticks and labels
+        for (let i = minVal; i <= maxVal; i++) {
+            const x = lineStartX + (i - minVal) * scale;
+            ctx.beginPath();
+            ctx.moveTo(x, lineY - 10);
+            ctx.lineTo(x, lineY + 10);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#00ff00';
+            ctx.font = '12px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText(i.toString(), x, lineY + 25);
+        }
+        
+        // Draw start position
+        const startX = lineStartX + (data.start_value - minVal) * scale;
+        ctx.fillStyle = '#00ff00';
+        ctx.beginPath();
+        ctx.arc(startX, lineY, 8, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Draw result position
+        const resultX = lineStartX + (data.result - minVal) * scale;
+        ctx.fillStyle = '#ffff00';
+        ctx.beginPath();
+        ctx.arc(resultX, lineY, 8, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Draw labels
+        ctx.fillStyle = '#00ff00';
+        ctx.font = '14px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText('START', startX, lineY - 20);
+        
+        ctx.fillStyle = '#ffff00';
+        ctx.fillText('RESULT', resultX, lineY - 20);
+    }
+    
+    renderArray(ctx, data) {
+        const width = ctx.canvas.width;
+        const height = ctx.canvas.height;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+        
+        // Calculate array parameters
+        const padding = 40;
+        const arrayWidth = width - 2 * padding;
+        const arrayHeight = height - 2 * padding;
+        
+        const cellWidth = arrayWidth / data.columns;
+        const cellHeight = arrayHeight / data.rows;
+        
+        // Draw array items
+        for (let row = 0; row < data.rows; row++) {
+            for (let col = 0; col < data.columns; col++) {
+                const x = padding + col * cellWidth;
+                const y = padding + row * cellHeight;
+                
+                // Draw item
+                ctx.fillStyle = '#00ff00';
+                ctx.fillRect(x + 2, y + 2, cellWidth - 4, cellHeight - 4);
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x + 2, y + 2, cellWidth - 4, cellHeight - 4);
+                
+                // Draw item number
+                const itemNumber = row * data.columns + col + 1;
+                ctx.fillStyle = '#000000';
+                ctx.font = '14px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText(itemNumber.toString(), x + cellWidth/2, y + cellHeight/2 + 5);
+            }
+        }
+        
+        // Draw labels
+        ctx.fillStyle = '#00ff00';
+        ctx.font = '16px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${data.rows} × ${data.columns} = ${data.total}`, width/2, height - 10);
+    }
+    
+    renderQuotative(ctx, data) {
+        const width = ctx.canvas.width;
+        const height = ctx.canvas.height;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+        
+        // Calculate layout
+        const padding = 40;
+        const availableWidth = width - 2 * padding;
+        const availableHeight = height - 2 * padding;
+        
+        const totalItems = data.total_amount;
+        const groupSize = data.group_size;
+        const numberOfGroups = data.number_of_groups;
+        const remainderCount = data.remainder_count;
+        
+        // Calculate item size
+        const maxItemsPerRow = Math.ceil(Math.sqrt(totalItems));
+        const itemSize = Math.min(availableWidth / maxItemsPerRow, availableHeight / Math.ceil(totalItems / maxItemsPerRow)) * 0.8;
+        const itemSpacing = itemSize * 0.1;
+        
+        let currentX = padding;
+        let currentY = padding;
+        let itemCount = 0;
+        
+        // Draw items
+        for (let group = 0; group < numberOfGroups; group++) {
+            // Draw group highlight
+            ctx.strokeStyle = '#ffff00';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(currentX - itemSpacing, currentY - itemSpacing, 
+                groupSize * (itemSize + itemSpacing), itemSize + itemSpacing);
+            
+            // Draw items in this group
+            for (let item = 0; item < groupSize; item++) {
+                ctx.fillStyle = '#00ff00';
+                ctx.fillRect(currentX, currentY, itemSize, itemSize);
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(currentX, currentY, itemSize, itemSize);
+                
+                // Draw item number
+                ctx.fillStyle = '#000000';
+                ctx.font = '10px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText((itemCount + 1).toString(), currentX + itemSize/2, currentY + itemSize/2 + 3);
+                
+                currentX += itemSize + itemSpacing;
+                if (currentX + itemSize > width - padding) {
+                    currentX = padding;
+                    currentY += itemSize + itemSpacing;
+                }
+                itemCount++;
+            }
+            
+            // Move to next group
+            if (group < numberOfGroups - 1) {
+                currentX += itemSpacing * 2;
+                if (currentX + itemSize > width - padding) {
+                    currentX = padding;
+                    currentY += itemSize + itemSpacing * 2;
+                }
+            }
+        }
+        
+        // Draw remainder items
+        if (remainderCount > 0) {
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(currentX - itemSpacing, currentY - itemSpacing,
+                remainderCount * (itemSize + itemSpacing), itemSize + itemSpacing);
+            
+            for (let item = 0; item < remainderCount; item++) {
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(currentX, currentY, itemSize, itemSize);
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(currentX, currentY, itemSize, itemSize);
+                
+                ctx.fillStyle = '#000000';
+                ctx.font = '10px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText((itemCount + 1).toString(), currentX + itemSize/2, currentY + itemSize/2 + 3);
+                
+                currentX += itemSize + itemSpacing;
+                itemCount++;
+            }
+        }
+        
+        // Draw summary
+        ctx.fillStyle = '#00ff00';
+        ctx.font = '14px Courier New';
+        ctx.textAlign = 'center';
+        let summary = `${numberOfGroups} groups of ${groupSize}`;
+        if (remainderCount > 0) {
+            summary += ` with ${remainderCount} remainder`;
+        }
+        ctx.fillText(summary, width/2, height - 10);
+    }
+    
+    showNoVisualMessage() {
+        const container = document.getElementById('visualContainer');
+        container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 280px; color: #00ff00; font-size: 16px;">Visual not available for this problem type</div>';
+    }
+    
+    clearCurrentVisualizer() {
+        this.currentVisualizer = null;
+    }
+    
+    showVisualHint() {
+        console.log('showVisualHint called');
+        console.log('Current visualizer:', this.currentVisualizer);
+        
+        if (!this.currentVisualizer) {
+            console.log('No visualizer found');
+            return;
+        }
+        
+        const visualData = this.currentVisualizer.visualData;
+        
+        if (visualData.type === 'area_model') {
+            this.showAreaModelHint(visualData);
+        } else if (visualData.type === 'number_line') {
+            this.showNumberLineHint(visualData);
+        } else if (visualData.type === 'quotative') {
+            const hint = `Count how many complete groups of ${visualData.group_size} can be made from ${visualData.total_amount} items`;
+            alert(hint);
+        }
+    }
+    
+    animateVisual() {
+        console.log('animateVisual called');
+        
+        if (!this.currentVisualizer || !this.currentVisualizer.canvas) {
+            console.log('No visualizer or canvas found');
+            return;
+        }
+        
+        const visualData = this.currentVisualizer.visualData;
+        const canvas = this.currentVisualizer.canvas;
+        
+        if (visualData.type === 'area_model') {
+            this.animateAreaModel(canvas, visualData);
+        } else if (visualData.type === 'number_line') {
+            this.animateNumberLine(canvas, visualData);
+        } else if (visualData.type === 'quotative') {
+            // Simple animation for quotative
+            let frame = 0;
+            const animate = () => {
+                this.renderQuotative(canvas, visualData);
+                
+                const ctx = canvas.getContext('2d');
+                const alpha = 0.5 + 0.5 * Math.sin(frame * 0.1);
+                ctx.fillStyle = `rgba(255, 255, 0, ${alpha})`;
+                ctx.font = '16px Courier New, monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('Animating...', canvas.width/2, canvas.height - 10);
+                
+                frame++;
+                if (frame < 100) {
+                    requestAnimationFrame(animate);
+                }
+            };
+            
+            animate();
+        }
+    }
+    
+    animateAreaModel(ctx, data) {
+        let frame = 0;
+        const animate = () => {
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            this.renderAreaModel(ctx, data);
+            
+            // Add pulsing effect
+            const alpha = 0.5 + 0.5 * Math.sin(frame * 0.1);
+            ctx.fillStyle = `rgba(255, 255, 0, ${alpha})`;
+            ctx.font = '16px Courier New, monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('Animating...', ctx.canvas.width/2, ctx.canvas.height - 10);
+            
+            frame++;
+            if (frame < 100) {
+                requestAnimationFrame(animate);
+            }
+        };
+        
+        animate();
+    }
+    
+    animateNumberLine() {
+        // Simple animation - highlight start and result positions
+        const ctx = this.currentVisualizer.ctx;
+        const canvas = this.currentVisualizer.canvas;
+        
+        let frame = 0;
+        const animate = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            this.renderNumberLine(ctx, this.currentVisualizer.visualData);
+            
+            // Add pulsing effect
+            const alpha = 0.5 + 0.5 * Math.sin(frame * 0.1);
+            ctx.fillStyle = `rgba(255, 0, 0, ${alpha})`;
+            
+            const visualData = this.currentVisualizer.visualData;
+            const padding = 40;
+            const lineY = canvas.height / 2;
+            const lineStartX = padding;
+            const lineEndX = canvas.width - padding;
+            
+            const minVal = Math.min(visualData.start_value, visualData.result) - 2;
+            const maxVal = Math.max(visualData.start_value, visualData.result) + 2;
+            const range = maxVal - minVal;
+            const scale = (lineEndX - lineStartX) / range;
+            
+            const startX = lineStartX + (visualData.start_value - minVal) * scale;
+            const resultX = lineStartX + (visualData.result - minVal) * scale;
+            
+            ctx.beginPath();
+            ctx.arc(startX, lineY, 12, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(resultX, lineY, 12, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            frame++;
+            if (frame < 100) {
+                requestAnimationFrame(animate);
+            }
+        };
+        
+        animate();
+    }
+    
+    animateArray() {
+        // Simple animation - highlight each row
+        const ctx = this.currentVisualizer.ctx;
+        const canvas = this.currentVisualizer.canvas;
+        
+        let frame = 0;
+        const animate = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            this.renderArray(ctx, this.currentVisualizer.visualData);
+            
+            // Add row highlighting
+            const visualData = this.currentVisualizer.visualData;
+            const padding = 40;
+            const arrayWidth = canvas.width - 2 * padding;
+            const arrayHeight = canvas.height - 2 * padding;
+            
+            const cellWidth = arrayWidth / visualData.columns;
+            const cellHeight = arrayHeight / visualData.rows;
+            
+            const currentRow = Math.floor(frame / 20) % visualData.rows;
+            
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+            ctx.fillRect(padding, padding + currentRow * cellHeight, arrayWidth, cellHeight);
+            
+            frame++;
+            if (frame < 200) {
+                requestAnimationFrame(animate);
+            }
+        };
+        
+        animate();
+    }
+    
+    animateQuotative() {
+        // Simple animation - highlight groups
+        const ctx = this.currentVisualizer.ctx;
+        const canvas = this.currentVisualizer.canvas;
+        
+        let frame = 0;
+        const animate = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            this.renderQuotative(ctx, this.currentVisualizer.visualData);
+            
+            frame++;
+            if (frame < 100) {
+                requestAnimationFrame(animate);
+            }
+        };
+        
+        animate();
+    }
+    
+    resetVisual() {
+        console.log('resetVisual called');
+        
+        if (!this.currentVisualizer) {
+            console.log('No visualizer found');
+            return;
+        }
+        
+        const visualData = this.currentVisualizer.visualData;
+        
+        if (this.currentVisualizer.canvas) {
+            const canvas = this.currentVisualizer.canvas;
+            
+            if (visualData.type === 'area_model') {
+                this.renderAreaModel(canvas, visualData);
+            } else if (visualData.type === 'number_line') {
+                this.renderNumberLine(canvas, visualData);
+            } else if (visualData.type === 'quotative') {
+                this.renderQuotative(canvas, visualData);
+            }
+        }
     }
     
     shoot() {

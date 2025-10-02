@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Iframe Test</title>
+    <style>
+        body {
+            margin: 20px;
+            font-family: 'Courier New', monospace;
+            background: #0c0c0c;
+            color: #00ff00;
+        }
+        .test-container {
+            border: 2px solid #00ff00;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        iframe {
+            width: 100%;
+            height: 400px;
+            border: 1px solid #333;
+            border-radius: 5px;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: 1px solid #0066cc;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-family: 'Courier New', monospace;
+        }
+        button:hover {
+            background: #0088ff;
+        }
+        .log {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #333;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Simple Iframe Test</h1>
+    
+    <div class="test-container">
+        <h2>Test Controls</h2>
+        <button onclick="testDirectLoad()">Test Direct Load</button>
+        <button onclick="testIframeLoad()">Test Iframe Load</button>
+        <button onclick="clearTest()">Clear</button>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Results</h2>
+        <div id="testContainer">
+            <div style="text-align: center; color: #666; padding: 50px;">
+                Click a test button to see the difference
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Console Log</h2>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function testDirectLoad() {
+            log('🧪 Testing Direct Load (should work)...');
+            const container = document.getElementById('testContainer');
+            container.innerHTML = '<iframe src="html_visual_modules/numberline.html" style="width: 100%; height: 400px; border: none;"></iframe>';
+            log('✅ Direct iframe load attempted');
+        }
+
+        function testIframeLoad() {
+            log('🧪 Testing Programmatic Iframe Load...');
+            const container = document.getElementById('testContainer');
+            container.innerHTML = '';
+
+            const iframe = document.createElement('iframe');
+            iframe.src = 'html_visual_modules/numberline.html';
+            iframe.style.width = '100%';
+            iframe.style.height = '400px';
+            iframe.style.border = 'none';
+
+            const loadingDiv = document.createElement('div');
+            loadingDiv.style.display = 'flex';
+            loadingDiv.style.alignItems = 'center';
+            loadingDiv.style.justifyContent = 'center';
+            loadingDiv.style.height = '400px';
+            loadingDiv.style.color = '#00ff00';
+            loadingDiv.style.fontSize = '16px';
+            loadingDiv.textContent = 'Loading visual module...';
+
+            container.appendChild(loadingDiv);
+
+            iframe.onload = () => {
+                log('✅ Iframe loaded');
+                container.removeChild(loadingDiv);
+                container.appendChild(iframe);
+
+                // Wait and check for visualizer
+                setTimeout(() => {
+                    try {
+                        const iframeWindow = iframe.contentWindow;
+                        log(`Available objects: ${Object.keys(iframeWindow).filter(k => k.includes('Visualizer')).join(', ')}`);
+                        
+                        if (iframeWindow.numberLineVisualizer) {
+                            log('✅ numberLineVisualizer found!');
+                            // Try to call a method
+                            iframeWindow.numberLineVisualizer.showHint();
+                            log('✅ showHint() called successfully');
+                        } else {
+                            log('❌ numberLineVisualizer not found');
+                        }
+                    } catch (error) {
+                        log(`❌ Error: ${error.message}`);
+                    }
+                }, 1000);
+            };
+
+            iframe.onerror = () => {
+                log('❌ Iframe load error');
+                container.removeChild(loadingDiv);
+            };
+        }
+
+        function clearTest() {
+            document.getElementById('testContainer').innerHTML = '<div style="text-align: center; color: #666; padding: 50px;">Click a test button to see the difference</div>';
+            document.getElementById('log').innerHTML = '';
+        }
+
+        log('🚀 Simple Iframe Test Page Loaded');
+        log('This will help identify if the issue is with iframe loading or communication');
+    </script>
+</body>
+</html>

@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arrays Visual Module</title>
+    <link rel="stylesheet" href="shared-styles.css">
+    <style>
+        .arrays-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .arrays-canvas {
+            width: 100%;
+            height: 300px;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .arrays-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .arrays-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 255, 0, 0.1);
+            border-radius: 6px;
+            border: 1px solid #00ff00;
+        }
+
+        .arrays-step {
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+
+        .array-item {
+            transition: all 0.3s ease;
+        }
+
+        .array-item.highlighted {
+            animation: array-pulse 1s infinite;
+        }
+
+        @keyframes array-pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .group-highlight {
+            stroke: #ffff00;
+            stroke-width: 3;
+            fill: rgba(255, 255, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="math-visual-container">
+        <div class="math-problem-statement" id="problemStatement">
+            Loading problem...
+        </div>
+        
+        <div class="arrays-container">
+            <canvas id="arraysCanvas" class="arrays-canvas"></canvas>
+        </div>
+
+        <div class="arrays-controls">
+            <button id="showHintBtn" class="math-btn">Show Hint</button>
+            <button id="highlightGroupsBtn" class="math-btn">Highlight Groups</button>
+            <button id="countBtn" class="math-btn">Count Items</button>
+            <button id="resetBtn" class="math-btn">Reset</button>
+        </div>
+
+        <div class="math-controls">
+            <input type="number" id="answerInput" class="math-answer-input" placeholder="Enter your answer">
+            <button id="submitBtn" class="math-btn">Submit</button>
+        </div>
+
+        <div id="feedbackContainer"></div>
+        <div id="infoContainer" class="arrays-info" style="display: none;"></div>
+    </div>
+
+    <script src="shared-utils.js"></script>
+    <script>
+        class ArraysVisualizer {
+            constructor(containerId = 'arraysCanvas') {
+                this.canvas = document.getElementById(containerId);
+                this.ctx = MathVisualUtils.getCanvasContext(this.canvas);
+                this.problemData = null;
+                this.showGroups = false;
+                this.isCounting = false;
+                this.countAnimationId = null;
+                
+                this.setupEventListeners();
+                this.setupCanvas();
+            }
+
+            setupEventListeners() {
+                document.getElementById('showHintBtn').addEventListener('click', () => this.showHint());
+                document.getElementById('highlightGroupsBtn').addEventListener('click', () => this.toggleGroups());
+                document.getElementById('countBtn').addEventListener('click', () => this.animateCounting());
+                document.getElementById('resetBtn').addEventListener('click', () => this.resetVisualization());
+                document.getElementById('submitBtn').addEventListener('click', () => this.submitAnswer());
+                
+                document.getElementById('answerInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.submitAnswer();
+                    }
+                });
+            }
+
+            setupCanvas() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.canvas.width = rect.width * window.devicePixelRatio;
+                this.canvas.height = rect.height * window.devicePixelRatio;
+                this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            loadProblem(problemData) {
+                this.problemData = problemData;
+                this.showGroups = false;
+                this.isCounting = false;
+                
+                document.getElementById('problemStatement').textContent = problemData.problem_statement;
+                this.drawArray();
+                this.showInfo();
+            }
+
+            drawArray() {
+                if (!this.problemData) return;
+
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const width = canvas.width / window.devicePixelRatio;
+                const height = canvas.height / window.devicePixelRatio;
+
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+
+                // Draw grid
+                MathVisualUtils.drawGrid(ctx, width, height, 20, '#00ff00', 0.1);
+
+                // Calculate array parameters
+                const padding = 40;
+                const arrayWidth = width - 2 * padding;
+                const arrayHeight = height - 2 * padding;
+
+                const rows = this.problemData.dimensions.rows;
+                const cols = this.problemData.dimensions.columns;
+
+                const cellWidth = arrayWidth / cols;
+                const cellHeight = arrayHeight / rows;
+
+                // Draw array items
+                for (let row = 0; row < rows; row++) {
+                    for (let col = 0; col < cols; col++) {
+                        const x = padding + col * cellWidth;
+                        const y = padding + row * cellHeight;
+
+                        this.drawArrayItem(x, y, cellWidth, cellHeight, row, col);
+                    }
+                }
+
+                // Draw group highlights if enabled
+                if (this.showGroups) {
+                    this.drawGroupHighlights(padding, cellWidth, cellHeight, rows, cols);
+                }
+
+                // Draw labels
+                this.drawLabels(padding, arrayWidth, arrayHeight, rows, cols);
+            }
+
+            drawArrayItem(x, y, width, height, row, col) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                
+                // Draw item background
+                ctx.fillStyle = '#00ff00';
+                ctx.fillRect(x + 2, y + 2, width - 4, height - 4);
+                
+                // Draw border
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x + 2, y + 2, width - 4, height - 4);
+                
+                // Draw item number
+                const itemNumber = row * this.problemData.dimensions.columns + col + 1;
+                MathVisualUtils.drawGlowText(ctx, itemNumber.toString(), 
+                    x + width/2, y + height/2, 14, '#000000');
+                
+                ctx.restore();
+            }
+
+            drawGroupHighlights(padding, cellWidth, cellHeight, rows, cols) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                ctx.strokeStyle = '#ffff00';
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.2)';
+                ctx.lineWidth = 3;
+
+                if (this.problemData.operation === 'multiplication') {
+                    // Highlight rows for multiplication
+                    for (let row = 0; row < rows; row++) {
+                        const y = padding + row * cellHeight;
+                        ctx.fillRect(padding, y, cellWidth * cols, cellHeight);
+                        ctx.strokeRect(padding, y, cellWidth * cols, cellHeight);
+                    }
+                } else {
+                    // Highlight groups for division
+                    const groupSize = this.problemData.operation === 'division' ? 
+                        (this.problemData.orientation === 'rows_first' ? rows : cols) : cols;
+                    
+                    for (let group = 0; group < groupSize; group++) {
+                        if (this.problemData.orientation === 'rows_first') {
+                            const y = padding + group * cellHeight;
+                            ctx.fillRect(padding, y, cellWidth * cols, cellHeight);
+                            ctx.strokeRect(padding, y, cellWidth * cols, cellHeight);
+                        } else {
+                            const x = padding + group * cellWidth;
+                            ctx.fillRect(x, padding, cellWidth, cellHeight * rows);
+                            ctx.strokeRect(x, padding, cellWidth, cellHeight * rows);
+                        }
+                    }
+                }
+                
+                ctx.restore();
+            }
+
+            drawLabels(padding, arrayWidth, arrayHeight, rows, cols) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                ctx.fillStyle = '#00ff00';
+                ctx.font = '14px Courier New, monospace';
+                ctx.textAlign = 'center';
+
+                // Draw dimension labels
+                const centerX = padding + arrayWidth / 2;
+                const centerY = padding + arrayHeight / 2;
+
+                // Draw operation-specific labels
+                if (this.problemData.operation === 'multiplication') {
+                    MathVisualUtils.drawGlowText(ctx, `${rows} rows`, centerX, padding - 20, 14);
+                    MathVisualUtils.drawGlowText(ctx, `${cols} columns`, padding - 20, centerY, 14);
+                    MathVisualUtils.drawGlowText(ctx, `Total: ${rows * cols}`, centerX, padding + arrayHeight + 20, 14);
+                } else {
+                    const divisor = this.problemData.orientation === 'rows_first' ? rows : cols;
+                    const quotient = this.problemData.orientation === 'rows_first' ? cols : rows;
+                    MathVisualUtils.drawGlowText(ctx, `${divisor} groups`, centerX, padding - 20, 14);
+                    MathVisualUtils.drawGlowText(ctx, `${quotient} per group`, padding - 20, centerY, 14);
+                    MathVisualUtils.drawGlowText(ctx, `Total: ${this.problemData.total_elements}`, centerX, padding + arrayHeight + 20, 14);
+                }
+
+                ctx.restore();
+            }
+
+            toggleGroups() {
+                this.showGroups = !this.showGroups;
+                document.getElementById('highlightGroupsBtn').textContent = 
+                    this.showGroups ? 'Hide Groups' : 'Highlight Groups';
+                this.drawArray();
+            }
+
+            animateCounting() {
+                if (this.isCounting) return;
+
+                this.isCounting = true;
+                document.getElementById('countBtn').textContent = 'Counting...';
+                document.getElementById('countBtn').disabled = true;
+
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const width = canvas.width / window.devicePixelRatio;
+                const height = canvas.height / window.devicePixelRatio;
+                const padding = 40;
+                const arrayWidth = width - 2 * padding;
+                const arrayHeight = height - 2 * padding;
+
+                const rows = this.problemData.dimensions.rows;
+                const cols = this.problemData.dimensions.columns;
+                const cellWidth = arrayWidth / cols;
+                const cellHeight = arrayHeight / rows;
+
+                let count = 0;
+                const totalItems = rows * cols;
+                const countDelay = 200;
+
+                const countStep = () => {
+                    if (count >= totalItems) {
+                        this.isCounting = false;
+                        document.getElementById('countBtn').textContent = 'Count Items';
+                        document.getElementById('countBtn').disabled = false;
+                        this.drawArray();
+                        return;
+                    }
+
+                    // Clear and redraw
+                    this.drawArray();
+
+                    // Highlight counted items
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                    
+                    for (let i = 0; i < count; i++) {
+                        const row = Math.floor(i / cols);
+                        const col = i % cols;
+                        const x = padding + col * cellWidth;
+                        const y = padding + row * cellHeight;
+                        
+                        ctx.fillRect(x + 2, y + 2, cellWidth - 4, cellHeight - 4);
+                    }
+                    
+                    ctx.restore();
+
+                    // Show count
+                    MathVisualUtils.drawGlowText(ctx, `Count: ${count}`, width/2, height - 20, 16, '#ff0000');
+
+                    count++;
+                    setTimeout(countStep, countDelay);
+                };
+
+                countStep();
+            }
+
+            showHint() {
+                if (!this.problemData) return;
+
+                const hint = this.getHint();
+                MathVisualUtils.showFeedback(
+                    document.getElementById('feedbackContainer'),
+                    hint,
+                    'hint'
+                );
+            }
+
+            getHint() {
+                if (this.problemData.operation === 'multiplication') {
+                    return `Count ${this.problemData.dimensions.rows} groups of ${this.problemData.dimensions.columns} items each`;
+                } else {
+                    const divisor = this.problemData.orientation === 'rows_first' ? 
+                        this.problemData.dimensions.rows : this.problemData.dimensions.columns;
+                    return `Divide ${this.problemData.total_elements} items into ${divisor} equal groups`;
+                }
+            }
+
+            submitAnswer() {
+                const input = document.getElementById('answerInput');
+                const userAnswer = parseInt(input.value);
+
+                if (!MathVisualUtils.validateNumericInput(input.value)) {
+                    MathVisualUtils.showFeedback(
+                        document.getElementById('feedbackContainer'),
+                        'Please enter a valid number',
+                        'incorrect'
+                    );
+                    return;
+                }
+
+                let correctAnswer;
+                if (this.problemData.operation === 'multiplication') {
+                    correctAnswer = this.problemData.total_elements;
+                } else {
+                    correctAnswer = this.problemData.orientation === 'rows_first' ? 
+                        this.problemData.dimensions.columns : this.problemData.dimensions.rows;
+                }
+
+                const isCorrect = userAnswer === correctAnswer;
+                
+                if (isCorrect) {
+                    MathVisualUtils.showFeedback(
+                        document.getElementById('feedbackContainer'),
+                        'Correct! Well done!',
+                        'correct'
+                    );
+                    MathVisualUtils.createPulseEffect(document.getElementById('arraysCanvas'));
+                } else {
+                    MathVisualUtils.showFeedback(
+                        document.getElementById('feedbackContainer'),
+                        `Incorrect. The answer is ${correctAnswer}`,
+                        'incorrect'
+                    );
+                }
+            }
+
+            showInfo() {
+                const infoContainer = document.getElementById('infoContainer');
+                infoContainer.innerHTML = `
+                    <div class="arrays-step"><strong>Operation:</strong> ${this.problemData.operation}</div>
+                    <div class="arrays-step"><strong>Dimensions:</strong> ${this.problemData.dimensions.rows} × ${this.problemData.dimensions.columns}</div>
+                    <div class="arrays-step"><strong>Total Elements:</strong> ${this.problemData.total_elements}</div>
+                    <div class="arrays-step"><strong>Orientation:</strong> ${this.problemData.orientation}</div>
+                `;
+                infoContainer.style.display = 'block';
+            }
+
+            resetVisualization() {
+                this.showGroups = false;
+                this.isCounting = false;
+                document.getElementById('highlightGroupsBtn').textContent = 'Highlight Groups';
+                document.getElementById('countBtn').textContent = 'Count Items';
+                document.getElementById('countBtn').disabled = false;
+                document.getElementById('answerInput').value = '';
+                
+                // Clear feedback
+                const feedbackContainer = document.getElementById('feedbackContainer');
+                feedbackContainer.innerHTML = '';
+                
+                this.drawArray();
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.arraysVisualizer = new ArraysVisualizer();
+            
+            // Example problem data (this would come from the Python backend)
+            const exampleProblem = {
+                type: "array",
+                operation: "multiplication",
+                orientation: "rows_first",
+                dimensions: { rows: 4, columns: 3 },
+                total_elements: 12,
+                coordinates: [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2],[3,0],[3,1],[3,2]],
+                row_groups: [[[0,0],[0,1],[0,2]], [[1,0],[1,1],[1,2]], [[2,0],[2,1],[2,2]], [[3,0],[3,1],[3,2]]],
+                column_groups: [[[0,0],[1,0],[2,0],[3,0]], [[0,1],[1,1],[2,1],[3,1]], [[0,2],[1,2],[2,2],[3,2]]],
+                show_grid: true,
+                highlight_groups: true,
+                show_labels: true,
+                problem_statement: "4 × 3 = ?"
+            };
+            
+            window.arraysVisualizer.loadProblem(exampleProblem);
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (window.arraysVisualizer) {
+                window.arraysVisualizer.setupCanvas();
+                window.arraysVisualizer.drawArray();
+            }
+        });
+    </script>
+</body>
+</html>

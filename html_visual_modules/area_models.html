@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Area Models Visual Module</title>
+    <link rel="stylesheet" href="shared-styles.css">
+    <style>
+        .area-models-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .area-models-canvas {
+            width: 100%;
+            height: 350px;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .area-models-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .area-models-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 255, 0, 0.1);
+            border-radius: 6px;
+            border: 1px solid #00ff00;
+        }
+
+        .area-models-step {
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+
+        .decomposition-steps {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 0, 0.1);
+            border-radius: 6px;
+            border: 1px solid #ffff00;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .decomposition-step {
+            margin: 5px 0;
+            padding: 5px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+
+        .partial-product {
+            stroke: #ffff00;
+            stroke-width: 2;
+            fill: rgba(255, 255, 0, 0.2);
+        }
+
+        .area-label {
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="math-visual-container">
+        <div class="math-problem-statement" id="problemStatement">
+            Loading problem...
+        </div>
+        
+        <div class="area-models-container">
+            <canvas id="areaModelsCanvas" class="area-models-canvas"></canvas>
+        </div>
+
+        <div class="area-models-controls">
+            <button id="showHintBtn" class="math-btn">Show Hint</button>
+            <button id="showPartialBtn" class="math-btn">Show Partial Products</button>
+            <button id="animateBtn" class="math-btn">Animate Decomposition</button>
+            <button id="resetBtn" class="math-btn">Reset</button>
+        </div>
+
+        <div class="math-controls">
+            <input type="number" id="answerInput" class="math-answer-input" placeholder="Enter your answer">
+            <button id="submitBtn" class="math-btn">Submit</button>
+        </div>
+
+        <div id="feedbackContainer"></div>
+        <div id="infoContainer" class="area-models-info" style="display: none;"></div>
+        <div id="stepsContainer" class="decomposition-steps" style="display: none;"></div>
+    </div>
+
+    <script src="shared-utils.js"></script>
+    <script>
+        class AreaModelsVisualizer {
+            constructor(containerId = 'areaModelsCanvas') {
+                this.canvas = document.getElementById(containerId);
+                this.ctx = MathVisualUtils.getCanvasContext(this.canvas);
+                this.problemData = null;
+                this.showPartialProducts = false;
+                this.isAnimating = false;
+                this.animationStep = 0;
+                
+                this.setupEventListeners();
+                this.setupCanvas();
+            }
+
+            setupEventListeners() {
+                document.getElementById('showHintBtn').addEventListener('click', () => this.showHint());
+                document.getElementById('showPartialBtn').addEventListener('click', () => this.togglePartialProducts());
+                document.getElementById('animateBtn').addEventListener('click', () => this.animateDecomposition());
+                document.getElementById('resetBtn').addEventListener('click', () => this.resetVisualization());
+                document.getElementById('submitBtn').addEventListener('click', () => this.submitAnswer());
+                
+                document.getElementById('answerInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.submitAnswer();
+                    }
+                });
+            }
+
+            setupCanvas() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.canvas.width = rect.width * window.devicePixelRatio;
+                this.canvas.height = rect.height * window.devicePixelRatio;
+                this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            loadProblem(problemData) {
+                this.problemData = problemData;
+                this.showPartialProducts = false;
+                this.isAnimating = false;
+                this.animationStep = 0;
+                
+                document.getElementById('problemStatement').textContent = problemData.problem_statement;
+                this.drawAreaModel();
+                this.showInfo();
+                this.showDecompositionSteps();
+            }
+
+            drawAreaModel() {
+                if (!this.problemData) return;
+
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const width = canvas.width / window.devicePixelRatio;
+                const height = canvas.height / window.devicePixelRatio;
+
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+
+                // Draw grid
+                MathVisualUtils.drawGrid(ctx, width, height, 20, '#00ff00', 0.1);
+
+                // Calculate area model parameters
+                const padding = 40;
+                const modelWidth = width - 2 * padding;
+                const modelHeight = height - 2 * padding;
+
+                const length = this.problemData.dimensions.length;
+                const width_dim = this.problemData.dimensions.width;
+
+                // Scale to fit canvas
+                const maxDimension = Math.max(length, width_dim);
+                const scale = Math.min(modelWidth / maxDimension, modelHeight / maxDimension) * 0.8;
+                
+                const scaledLength = length * scale;
+                const scaledWidth = width_dim * scale;
+                
+                const startX = padding + (modelWidth - scaledLength) / 2;
+                const startY = padding + (modelHeight - scaledWidth) / 2;
+
+                // Draw main rectangle
+                this.drawRectangle(startX, startY, scaledLength, scaledWidth, '#00ff00', 2);
+
+                // Draw grid lines inside rectangle
+                this.drawInternalGrid(startX, startY, scaledLength, scaledWidth, length, width_dim);
+
+                // Draw labels
+                this.drawLabels(startX, startY, scaledLength, scaledWidth, length, width_dim);
+
+                // Draw partial products if enabled
+                if (this.showPartialProducts && this.problemData.partial_products) {
+                    this.drawPartialProducts(startX, startY, scaledLength, scaledWidth, length, width_dim);
+                }
+            }
+
+            drawRectangle(x, y, width, height, color, lineWidth) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = lineWidth;
+                ctx.strokeRect(x, y, width, height);
+                ctx.restore();
+            }
+
+            drawInternalGrid(startX, startY, scaledLength, scaledWidth, length, width_dim) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = 0.5;
+
+                const cellWidth = scaledLength / length;
+                const cellHeight = scaledWidth / width_dim;
+
+                // Vertical lines
+                for (let i = 1; i < length; i++) {
+                    const x = startX + i * cellWidth;
+                    ctx.beginPath();
+                    ctx.moveTo(x, startY);
+                    ctx.lineTo(x, startY + scaledWidth);
+                    ctx.stroke();
+                }
+
+                // Horizontal lines
+                for (let i = 1; i < width_dim; i++) {
+                    const y = startY + i * cellHeight;
+                    ctx.beginPath();
+                    ctx.moveTo(startX, y);
+                    ctx.lineTo(startX + scaledLength, y);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+
+            drawLabels(startX, startY, scaledLength, scaledWidth, length, width_dim) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                ctx.fillStyle = '#00ff00';
+                ctx.font = '14px Courier New, monospace';
+                ctx.textAlign = 'center';
+
+                // Draw dimension labels
+                const centerX = startX + scaledLength / 2;
+                const centerY = startY + scaledWidth / 2;
+
+                MathVisualUtils.drawGlowText(ctx, `${length}`, centerX, startY - 20, 14);
+                MathVisualUtils.drawGlowText(ctx, `${width_dim}`, startX - 20, centerY, 14);
+                MathVisualUtils.drawGlowText(ctx, `Area = ${length} × ${width_dim} = ${this.problemData.total_area}`, 
+                    centerX, startY + scaledWidth + 20, 14);
+
+                ctx.restore();
+            }
+
+            drawPartialProducts(startX, startY, scaledLength, scaledWidth, length, width_dim) {
+                const ctx = this.ctx;
+                
+                ctx.save();
+                ctx.strokeStyle = '#ffff00';
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.2)';
+                ctx.lineWidth = 2;
+
+                const cellWidth = scaledLength / length;
+                const cellHeight = scaledWidth / width_dim;
+
+                for (const partial of this.problemData.partial_products) {
+                    const regionX = startX + partial.coordinates[0][0] * cellWidth;
+                    const regionY = startY + partial.coordinates[0][1] * cellHeight;
+                    const regionWidth = partial.length * cellWidth;
+                    const regionHeight = partial.width * cellHeight;
+
+                    // Draw highlight
+                    ctx.fillRect(regionX, regionY, regionWidth, regionHeight);
+                    ctx.strokeRect(regionX, regionY, regionWidth, regionHeight);
+
+                    // Draw area label
+                    const labelX = regionX + regionWidth / 2;
+                    const labelY = regionY + regionHeight / 2;
+                    MathVisualUtils.drawGlowText(ctx, `${partial.area}`, labelX, labelY, 12, '#ffff00');
+                }
+
+                ctx.restore();
+            }
+
+            togglePartialProducts() {
+                this.showPartialProducts = !this.showPartialProducts;
+                document.getElementById('showPartialBtn').textContent = 
+                    this.showPartialProducts ? 'Hide Partial Products' : 'Show Partial Products';
+                this.drawAreaModel();
+            }
+
+            animateDecomposition() {
+                if (this.isAnimating || !this.problemData.partial_products) return;
+
+                this.isAnimating = true;
+                this.animationStep = 0;
+                document.getElementById('animateBtn').textContent = 'Animating...';
+                document.getElementById('animateBtn').disabled = true;
+
+                this.animateStep();
+            }
+
+            animateStep() {
+                if (this.animationStep >= this.problemData.partial_products.length) {
+                    this.isAnimating = false;
+                    document.getElementById('animateBtn').textContent = 'Animate Decomposition';
+                    document.getElementById('animateBtn').disabled = false;
+                    this.drawAreaModel();
+                    return;
+                }
+
+                // Clear and redraw
+                this.drawAreaModel();
+
+                // Highlight current partial product
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const width = canvas.width / window.devicePixelRatio;
+                const height = canvas.height / window.devicePixelRatio;
+                const padding = 40;
+                const modelWidth = width - 2 * padding;
+                const modelHeight = height - 2 * padding;
+
+                const length = this.problemData.dimensions.length;
+                const width_dim = this.problemData.dimensions.width;
+                const maxDimension = Math.max(length, width_dim);
+                const scale = Math.min(modelWidth / maxDimension, modelHeight / maxDimension) * 0.8;
+                
+                const scaledLength = length * scale;
+                const scaledWidth = width_dim * scale;
+                const startX = padding + (modelWidth - scaledLength) / 2;
+                const startY = padding + (modelHeight - scaledWidth) / 2;
+
+                const cellWidth = scaledLength / length;
+                const cellHeight = scaledWidth / width_dim;
+
+                const partial = this.problemData.partial_products[this.animationStep];
+                const regionX = startX + partial.coordinates[0][0] * cellWidth;
+                const regionY = startY + partial.coordinates[0][1] * cellHeight;
+                const regionWidth = partial.length * cellWidth;
+                const regionHeight = partial.width * cellHeight;
+
+                // Highlight current step
+                ctx.save();
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 3;
+                ctx.fillRect(regionX, regionY, regionWidth, regionHeight);
+                ctx.strokeRect(regionX, regionY, regionWidth, regionHeight);
+
+                // Show step info
+                const labelX = regionX + regionWidth / 2;
+                const labelY = regionY + regionHeight / 2;
+                MathVisualUtils.drawGlowText(ctx, `${partial.length} × ${partial.width} = ${partial.area}`, 
+                    labelX, labelY, 14, '#ff0000');
+
+                ctx.restore();
+
+                this.animationStep++;
+                setTimeout(() => this.animateStep(), 1500);
+            }
+
+            showHint() {
+                if (!this.problemData) return;
+
+                const hint = this.getHint();
+                MathVisualUtils.showFeedback(
+                    document.getElementById('feedbackContainer'),
+                    hint,
+                    'hint'
+                );
+            }
+
+            getHint() {
+                if (this.problemData.strategy === 'standard') {
+                    return `Find the area of a rectangle that is ${this.problemData.dimensions.length} units long and ${this.problemData.dimensions.width} units wide`;
+                } else if (this.problemData.strategy === 'partial_products') {
+                    return `Break ${this.problemData.dimensions.length} × ${this.problemData.dimensions.width} into smaller rectangles and add their areas`;
+                } else {
+                    return `Use the distributive property: break one dimension into two parts`;
+                }
+            }
+
+            submitAnswer() {
+                const input = document.getElementById('answerInput');
+                const userAnswer = parseInt(input.value);
+
+                if (!MathVisualUtils.validateNumericInput(input.value)) {
+                    MathVisualUtils.showFeedback(
+                        document.getElementById('feedbackContainer'),
+                        'Please enter a valid number',
+                        'incorrect'
+                    );
+                    return;
+                }
+
+                const isCorrect = userAnswer === this.problemData.total_area;
+                
+                if (isCorrect) {
+                    MathVisualUtils.showFeedback(
+                        document.getElementById('feedbackContainer'),
+                        'Correct! Well done!',
+                        'correct'
+                    );
+                    MathVisualUtils.createPulseEffect(document.getElementById('areaModelsCanvas'));
+                } else {
+                    MathVisualUtils.showFeedback(
+                        document.getElementById('feedbackContainer'),
+                        `Incorrect. The answer is ${this.problemData.total_area}`,
+                        'incorrect'
+                    );
+                }
+            }
+
+            showInfo() {
+                const infoContainer = document.getElementById('infoContainer');
+                infoContainer.innerHTML = `
+                    <div class="area-models-step"><strong>Strategy:</strong> ${this.problemData.strategy}</div>
+                    <div class="area-models-step"><strong>Dimensions:</strong> ${this.problemData.dimensions.length} × ${this.problemData.dimensions.width}</div>
+                    <div class="area-models-step"><strong>Total Area:</strong> ${this.problemData.total_area}</div>
+                    <div class="area-models-step"><strong>Partial Products:</strong> ${this.problemData.partial_products ? this.problemData.partial_products.length : 0}</div>
+                `;
+                infoContainer.style.display = 'block';
+            }
+
+            showDecompositionSteps() {
+                if (!this.problemData.partial_products || this.problemData.partial_products.length === 0) {
+                    return;
+                }
+
+                const stepsContainer = document.getElementById('stepsContainer');
+                let stepsHtml = '<div style="font-weight: bold; margin-bottom: 10px;">Decomposition Steps:</div>';
+                
+                // This would normally come from the Python backend
+                const steps = this.getDecompositionSteps();
+                steps.forEach((step, index) => {
+                    stepsHtml += `<div class="decomposition-step">${index + 1}. ${step}</div>`;
+                });
+
+                stepsContainer.innerHTML = stepsHtml;
+                stepsContainer.style.display = 'block';
+            }
+
+            getDecompositionSteps() {
+                // This would normally come from the Python backend
+                const steps = [];
+                steps.push(`Break ${this.problemData.dimensions.length} into tens and ones: ${this.problemData.dimensions.length} = ${Math.floor(this.problemData.dimensions.length / 10) * 10} + ${this.problemData.dimensions.length % 10}`);
+                steps.push(`Break ${this.problemData.dimensions.width} into tens and ones: ${this.problemData.dimensions.width} = ${Math.floor(this.problemData.dimensions.width / 10) * 10} + ${this.problemData.dimensions.width % 10}`);
+                steps.push('Multiply each part:');
+                
+                this.problemData.partial_products.forEach(partial => {
+                    steps.push(`  ${partial.length} × ${partial.width} = ${partial.area}`);
+                });
+                
+                const total = this.problemData.partial_products.reduce((sum, partial) => sum + partial.area, 0);
+                const partialValues = this.problemData.partial_products.map(p => p.area).join(' + ');
+                steps.push(`Add all parts: ${partialValues} = ${total}`);
+                
+                return steps;
+            }
+
+            resetVisualization() {
+                this.showPartialProducts = false;
+                this.isAnimating = false;
+                this.animationStep = 0;
+                document.getElementById('showPartialBtn').textContent = 'Show Partial Products';
+                document.getElementById('animateBtn').textContent = 'Animate Decomposition';
+                document.getElementById('animateBtn').disabled = false;
+                document.getElementById('answerInput').value = '';
+                
+                // Clear feedback
+                const feedbackContainer = document.getElementById('feedbackContainer');
+                feedbackContainer.innerHTML = '';
+                
+                this.drawAreaModel();
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.areaModelsVisualizer = new AreaModelsVisualizer();
+            
+            // Listen for messages from parent window
+            window.addEventListener('message', (event) => {
+                console.log('Area models received message:', event.data);
+                if (event.data.type === 'loadProblem') {
+                    console.log('Loading problem data:', event.data.data);
+                    window.areaModelsVisualizer.loadProblem(event.data.data);
+                } else if (event.data.type === 'showHint') {
+                    console.log('Showing hint');
+                    window.areaModelsVisualizer.showHint();
+                } else if (event.data.type === 'animate') {
+                    console.log('Animating');
+                    window.areaModelsVisualizer.animateDecomposition();
+                } else if (event.data.type === 'reset') {
+                    console.log('Resetting');
+                    window.areaModelsVisualizer.resetVisualization();
+                }
+            });
+            
+            // Example problem data (this would come from the Python backend)
+            const exampleProblem = {
+                type: "area_model",
+                strategy: "partial_products",
+                dimensions: { length: 12, width: 8 },
+                total_area: 96,
+                coordinates: [[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[1,0],[1,1],[1,2],[1,3],[1,4],[1,5],[1,6],[1,7],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[2,6],[2,7],[3,0],[3,1],[3,2],[3,3],[3,4],[3,5],[3,6],[3,7],[4,0],[4,1],[4,2],[4,3],[4,4],[4,5],[4,6],[4,7],[5,0],[5,1],[5,2],[5,3],[5,4],[5,5],[5,6],[5,7],[6,0],[6,1],[6,2],[6,3],[6,4],[6,5],[6,6],[6,7],[7,0],[7,1],[7,2],[7,3],[7,4],[7,5],[7,6],[7,7],[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,6],[8,7],[9,0],[9,1],[9,2],[9,3],[9,4],[9,5],[9,6],[9,7],[10,0],[10,1],[10,2],[10,3],[10,4],[10,5],[10,6],[10,7],[11,0],[11,1],[11,2],[11,3],[11,4],[11,5],[11,6],[11,7]],
+                partial_products: [
+                    {
+                        region: "tens_tens",
+                        length: 10,
+                        width: 8,
+                        area: 80,
+                        coordinates: [[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[1,0],[1,1],[1,2],[1,3],[1,4],[1,5],[1,6],[1,7],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[2,6],[2,7],[3,0],[3,1],[3,2],[3,3],[3,4],[3,5],[3,6],[3,7],[4,0],[4,1],[4,2],[4,3],[4,4],[4,5],[4,6],[4,7],[5,0],[5,1],[5,2],[5,3],[5,4],[5,5],[5,6],[5,7],[6,0],[6,1],[6,2],[6,3],[6,4],[6,5],[6,6],[6,7],[7,0],[7,1],[7,2],[7,3],[7,4],[7,5],[7,6],[7,7],[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,6],[8,7],[9,0],[9,1],[9,2],[9,3],[9,4],[9,5],[9,6],[9,7]]
+                    },
+                    {
+                        region: "ones_tens",
+                        length: 2,
+                        width: 8,
+                        area: 16,
+                        coordinates: [[10,0],[10,1],[10,2],[10,3],[10,4],[10,5],[10,6],[10,7],[11,0],[11,1],[11,2],[11,3],[11,4],[11,5],[11,6],[11,7]]
+                    }
+                ],
+                show_grid: true,
+                show_partial_products: true,
+                show_labels: true,
+                highlight_regions: true,
+                problem_statement: "12 × 8 = ?"
+            };
+            
+            window.areaModelsVisualizer.loadProblem(exampleProblem);
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (window.areaModelsVisualizer) {
+                window.areaModelsVisualizer.setupCanvas();
+                window.areaModelsVisualizer.drawAreaModel();
+            }
+        });
+    </script>
+</body>
+</html>
