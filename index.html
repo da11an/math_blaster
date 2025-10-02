@@ -223,6 +223,7 @@
                     <input type="number" id="mathAnswer" placeholder="Answer" autofocus>
                     <br>
                     <button onclick="submitAnswer()">Submit Answer</button>
+                    <button onclick="showVisualHelp()" style="background: #ff6600; color: white; border: 1px solid #ff6600;">🎯 Visual Help</button>
                     <button onclick="exitMathMode()">Back to Game</button>
                     <button onclick="reviewProgress()" style="background: #0066cc; color: white; border: 1px solid #0066cc;">📊 Review Progress</button>
                     <button onclick="logout()" style="background: #ff4444; color: white; border: 1px solid #ff4444;">Logout</button>
@@ -342,9 +343,240 @@
         
     </div>
     
+    <!-- Visual Help Modal -->
+    <div id="visualHelpModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 40; display: none;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.95); border: 2px solid #ff6600; border-radius: 10px; padding: 20px; max-width: 95%; max-height: 90%; overflow-y: auto; min-width: 900px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color: #ff6600; margin: 0;">🎯 Visual Help - How to Solve This Problem</h2>
+                <button onclick="closeVisualHelp()" style="background: #ff4444; color: white; border: 1px solid #ff4444; padding: 5px 10px; border-radius: 3px; cursor: pointer;">✕</button>
+            </div>
+            
+            <div id="visualHelpContent" style="color: #fff;">
+                <div id="problemStatement" style="font-size: 18px; font-weight: bold; text-align: center; margin-bottom: 20px; color: #00ff00;"></div>
+                <canvas id="visualCanvas" width="800" height="400" style="border: 1px solid #333; background: rgba(0,0,0,0.8); display: block; margin: 0 auto;"></canvas>
+                <div style="text-align: center; margin-top: 15px;">
+                    <button onclick="animateVisual()" style="background: #ff6600; color: white; border: 1px solid #ff6600; padding: 8px 16px; border-radius: 5px; cursor: pointer; margin: 0 5px;">🎬 Animate</button>
+                    <button onclick="showHint()" style="background: #0066cc; color: white; border: 1px solid #0066cc; padding: 8px 16px; border-radius: 5px; cursor: pointer; margin: 0 5px;">💡 Hint</button>
+                    <button onclick="resetVisual()" style="background: #666; color: white; border: 1px solid #666; padding: 8px 16px; border-radius: 5px; cursor: pointer; margin: 0 5px;">🔄 Reset</button>
+                </div>
+                <div id="infoDisplay" style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.5); border-radius: 5px; font-size: 14px; min-height: 40px;"></div>
+            </div>
+        </div>
+    </div>
+    
     <script src="spaceship_game.js?v=11"></script>
+    <script src="html_visual_modules/shared-utils.js"></script>
+    <script src="visual_help_classes.js"></script>
     
     <script>
+        // Include visual module classes from direct_visual_launcher.html
+        // This will be added dynamically when needed
+        // Visual Help Functions
+        let visualController = null;
+        
+        function showVisualHelp() {
+            const modal = document.getElementById('visualHelpModal');
+            const problemStatement = document.getElementById('problemStatement');
+            const canvas = document.getElementById('visualCanvas');
+            
+            // Debug: Check what's available
+            console.log('🔍 Debug - showVisualHelp called');
+            console.log('window.spaceshipGame:', window.spaceshipGame);
+            
+            // Get current problem data from the game instance
+            const gameInstance = window.spaceshipGame;
+            if (!gameInstance) {
+                console.error('❌ Game instance not found');
+                alert('Game not initialized. Please refresh the page and try again.');
+                return;
+            }
+            
+            console.log('Game instance found:', gameInstance);
+            console.log('mathMode:', gameInstance.mathMode);
+            console.log('currentProblem:', gameInstance.mathMode?.currentProblem);
+            
+            if (!gameInstance.mathMode || !gameInstance.mathMode.currentProblem) {
+                console.error('❌ No current problem found');
+                alert('No problem loaded. Please generate a problem first.');
+                return;
+            }
+            
+            // Show the modal
+            modal.style.display = 'block';
+            
+            // Set problem statement
+            problemStatement.textContent = gameInstance.mathMode.currentProblem;
+            
+            // Initialize visual controller
+            visualController = new DirectVisualController();
+            
+            // Transform problem data for visual module
+            const visualData = transformProblemForVisual({
+                question: gameInstance.mathMode.currentProblem,
+                answer: gameInstance.mathMode.correctAnswer
+            });
+            
+            console.log('Visual data created:', visualData);
+            
+            // Load the problem into the visual controller
+            visualController.loadProblem(visualData);
+        }
+        
+        function closeVisualHelp() {
+            const modal = document.getElementById('visualHelpModal');
+            modal.style.display = 'none';
+            visualController = null;
+        }
+        
+        function transformProblemForVisual(problem) {
+            // Extract numbers and operation from the problem question
+            const question = problem.question;
+            let operation, startPos, changeAmount, resultPos;
+            
+            if (question.includes('+')) {
+                operation = 'addition';
+                const parts = question.split('+');
+                const a = parseInt(parts[0].trim());
+                const b = parseInt(parts[1].trim());
+                startPos = a;
+                changeAmount = b;
+                resultPos = a + b;
+            } else if (question.includes('-')) {
+                operation = 'subtraction';
+                const parts = question.split('-');
+                const a = parseInt(parts[0].trim());
+                const b = parseInt(parts[1].trim());
+                startPos = a;
+                changeAmount = b;
+                resultPos = a - b;
+            } else if (question.includes('×') || question.includes('*')) {
+                operation = 'multiplication';
+                const parts = question.split(/[×*]/);
+                const a = parseInt(parts[0].trim());
+                const b = parseInt(parts[1].trim());
+                return {
+                    problem_statement: question,
+                    operation: 'multiplication',
+                    dimensions: { length: a, width: b },
+                    total_area: a * b,
+                    partial_products: generatePartialProducts(a, b)
+                };
+            } else if (question.includes('÷') || question.includes('/')) {
+                operation = 'division';
+                const parts = question.split(/[÷/]/);
+                const dividend = parseInt(parts[0].trim());
+                const divisor = parseInt(parts[1].trim());
+                const quotient = dividend / divisor;
+                
+                if (dividend > 10 * divisor) {
+                    // Use division area model for large division
+                    return {
+                        problem_statement: question,
+                        operation: 'division',
+                        dividend: dividend,
+                        divisor: divisor,
+                        quotient: quotient,
+                        partial_quotients: generatePartialQuotients(dividend, divisor)
+                    };
+                } else {
+                    // Use quotative model for small division
+                    return {
+                        problem_statement: question,
+                        operation: 'division',
+                        groups: quotient,
+                        items_per_group: divisor,
+                        total_items: dividend,
+                        group_labels: generateGroupLabels(quotient, divisor)
+                    };
+                }
+            }
+            
+            return {
+                problem_statement: question,
+                operation: operation,
+                start_position: startPos,
+                change_amount: changeAmount,
+                result_position: resultPos
+            };
+        }
+        
+        function generatePartialProducts(a, b) {
+            // Generate partial products for area model
+            const products = [];
+            const aStr = a.toString();
+            const bStr = b.toString();
+            
+            for (let i = 0; i < aStr.length; i++) {
+                for (let j = 0; j < bStr.length; j++) {
+                    const aDigit = parseInt(aStr[aStr.length - 1 - i]);
+                    const bDigit = parseInt(bStr[bStr.length - 1 - j]);
+                    const product = aDigit * bDigit;
+                    const placeValueA = Math.pow(10, i);
+                    const placeValueB = Math.pow(10, j);
+                    
+                    products.push({
+                        length: aDigit * placeValueA,
+                        width: bDigit * placeValueB,
+                        area: product * placeValueA * placeValueB,
+                        coordinates: [[i, j], [i + 1, j + 1]]
+                    });
+                }
+            }
+            
+            return products;
+        }
+        
+        function generatePartialQuotients(dividend, divisor) {
+            // Generate partial quotients for division area model
+            const quotients = [];
+            let remaining = dividend;
+            let currentQuotient = 0;
+            
+            while (remaining >= divisor) {
+                const nextQuotient = Math.floor(remaining / divisor);
+                const product = nextQuotient * divisor;
+                quotients.push({
+                    quotient: nextQuotient,
+                    product: product
+                });
+                remaining -= product;
+                currentQuotient += nextQuotient;
+            }
+            
+            return quotients;
+        }
+        
+        function generateGroupLabels(groups, itemsPerGroup) {
+            // Generate group labels for quotative model
+            const labels = [];
+            for (let i = 1; i <= groups; i++) {
+                labels.push({
+                    group: i,
+                    items: itemsPerGroup,
+                    total: i * itemsPerGroup
+                });
+            }
+            return labels;
+        }
+        
+        function animateVisual() {
+            if (visualController) {
+                visualController.animate();
+            }
+        }
+        
+        function showHint() {
+            if (visualController) {
+                visualController.showHint();
+            }
+        }
+        
+        function resetVisual() {
+            if (visualController) {
+                visualController.reset();
+            }
+        }
+        
         // Progress Review Functions
         async function reviewProgress() {
             const modal = document.getElementById('progressModal');

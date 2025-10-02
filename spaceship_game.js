@@ -4273,5 +4273,6 @@ function startGame() {
 
 // Start the game
 const game = new SpaceshipGame();
+window.spaceshipGame = game; // Make game instance globally accessible
 console.log('Game object created:', game);
 console.log('Game API URL:', game.apiBaseUrl);
